@@ -25,6 +25,8 @@ void VoxelLayer::onInitialize()
     voxel_pub_ = private_nh.advertise < costmap_2d::VoxelGrid > ("voxel_grid", 1);
 
   clearing_endpoints_pub_ = private_nh.advertise<sensor_msgs::PointCloud>( "clearing_endpoints", 1 );
+  combination_method_ = 1;
+
 }
 
 void VoxelLayer::setupDynamicReconfigure(ros::NodeHandle& nh)
