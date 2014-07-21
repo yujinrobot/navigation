@@ -1,6 +1,6 @@
 <package>
     <name>costmap_2d</name>
-    <version>1.11.4</version>
+    <version>1.11.10</version>
     <description>
         This package provides an implementation of a 2D costmap that takes in sensor
         data from the world, builds a 2D or 3D occupancy grid of the data (depending
@@ -15,11 +15,13 @@
     <author>Dave Hershberger</author>
     <author>contradict@gmail.com</author>
     <maintainer email="davidvlu@gmail.com">David V. Lu!!</maintainer>
+    <maintainer email="fergs@unboundedrobotics.com">Michael Ferguson</maintainer>
     <license>BSD</license>
     <url>http://wiki.ros.org/costmap_2d</url>
 
     <buildtool_depend>catkin</buildtool_depend>
 
+    <build_depend>cmake_modules</build_depend>
     <build_depend>dynamic_reconfigure</build_depend>
     <build_depend>geometry_msgs</build_depend>
     <build_depend>laser_geometry</build_depend>

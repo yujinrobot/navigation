@@ -14,26 +14,36 @@ namespace costmap_2d
 InflationLayer::InflationLayer()
   : inflation_radius_( 0 )
   , weight_( 0 )
-  , seen_(NULL)
   , cell_inflation_radius_(0)
   , cached_cell_inflation_radius_(0)
   , dsrv_(NULL)
-{}
+{
+  access_ = new boost::shared_mutex();
+}
 
 void InflationLayer::onInitialize()
 {
-  ros::NodeHandle nh("~/" + name_), g_nh;
-  current_ = true;
-  need_reinflation_ = false;
+  {
+    boost::unique_lock < boost::shared_mutex > lock(*access_);
+    ros::NodeHandle nh("~/" + name_), g_nh;
+    current_ = true;
+    seen_ = NULL;
+    need_reinflation_ = false;
 
-  if(dsrv_ != NULL){
-    delete dsrv_;
+    dynamic_reconfigure::Server<costmap_2d::InflationPluginConfig>::CallbackType cb = boost::bind(
+        &InflationLayer::reconfigureCB, this, _1, _2);
+
+    if(dsrv_ != NULL){
+      dsrv_->clearCallback();
+      dsrv_->setCallback(cb);
+    }
+    else
+    {
+      dsrv_ = new dynamic_reconfigure::Server<costmap_2d::InflationPluginConfig>(ros::NodeHandle("~/" + name_));
+      dsrv_->setCallback(cb);
+    }
+
   }
-
-  dsrv_ = new dynamic_reconfigure::Server<costmap_2d::InflationPluginConfig>(ros::NodeHandle("~/" + name_));
-  dynamic_reconfigure::Server<costmap_2d::InflationPluginConfig>::CallbackType cb = boost::bind(
-      &InflationLayer::reconfigureCB, this, _1, _2);
-  dsrv_->setCallback(cb);
 
   matchSize();
 }
@@ -57,18 +67,16 @@ void InflationLayer::reconfigureCB(costmap_2d::InflationPluginConfig &config, ui
 
 void InflationLayer::matchSize()
 {
+  boost::unique_lock < boost::shared_mutex > lock(*access_);
   costmap_2d::Costmap2D* costmap = layered_costmap_->getCostmap();
   resolution_ = costmap->getResolution();
   cell_inflation_radius_ = cellDistance(inflation_radius_);
   computeCaches();
 
   unsigned int size_x = costmap->getSizeInCellsX(), size_y = costmap->getSizeInCellsY();
-
-  seen_mutex_.lock();
   if (seen_)
     delete seen_;
   seen_ = new bool[size_x * size_y];
-  seen_mutex_.unlock();
 }
 
 void InflationLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x,
@@ -101,6 +109,7 @@ void InflationLayer::onFootprintChanged()
 void InflationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i,
                                           int max_j)
 {
+  boost::unique_lock < boost::shared_mutex > lock(*access_);
   if (!enabled_)
     return;
 
@@ -110,10 +119,7 @@ void InflationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
   unsigned char* master_array = master_grid.getCharMap();
   unsigned int size_x = master_grid.getSizeInCellsX(), size_y = master_grid.getSizeInCellsY();
 
-  // Issue #137 fix; mutual exclusion with seen_ array rebuilding on InflationLayer::matchSize method
-  seen_mutex_.lock();
   memset(seen_, false, size_x * size_y * sizeof(bool));
-  seen_mutex_.unlock();
 
   // We need to include in the inflation cells outside the bounding
   // box min_i...max_j, by the amount cell_inflation_radius_.  Cells
@@ -153,6 +159,9 @@ void InflationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
     unsigned int sx = current_cell.src_x_;
     unsigned int sy = current_cell.src_y_;
 
+    //pop once we have our cell info
+    inflation_queue_.pop();
+
     //attempt to put the neighbors of the current cell onto the queue
     if (mx > 0)
       enqueue(master_array, index - 1, mx - 1, my, sx, sy);
@@ -162,14 +171,12 @@ void InflationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
       enqueue(master_array, index + 1, mx + 1, my, sx, sy);
     if (my < size_y - 1)
       enqueue(master_array, index + size_x, mx, my + 1, sx, sy);
-
-    //remove the current cell from the priority queue
-    inflation_queue_.pop();
   }
 }
 
 /**
  * @brief  Given an index of a cell in the costmap, place it into a priority queue for obstacle inflation
+ * @param  grid The costmap
  * @param  index The index of the cell
  * @param  mx The x coordinate of the cell (can be computed from the index, but saves time to store it)
  * @param  my The y coordinate of the cell (can be computed from the index, but saves time to store it)
@@ -225,7 +232,7 @@ void InflationLayer::computeCaches()
       cached_distances_[i] = new double[cell_inflation_radius_ + 2];
       for (unsigned int j = 0; j <= cell_inflation_radius_ + 1; ++j)
       {
-        cached_distances_[i][j] = sqrt(i * i + j * j);
+        cached_distances_[i][j] = hypot(i, j);
       }
     }
 

@@ -3,6 +3,7 @@ project(base_local_planner)
 
 find_package(catkin REQUIRED
         COMPONENTS
+            cmake_modules
             roscpp
             tf
             message_generation
@@ -53,7 +54,7 @@ catkin_package(
     INCLUDE_DIRS include
     LIBRARIES
         base_local_planner
-#       trajectory_planner_ros
+        trajectory_planner_ros
     CATKIN_DEPENDS
         roscpp
         dynamic_reconfigure
@@ -71,7 +72,7 @@ catkin_package(
 #set(ROS_COMPILE_FLAGS "-g" ${ROS_COMPILE_FLAGS})
 #set(ROS_LINK_FLAGS "-g" ${ROS_LINK_FLAGS})
 
-add_library(base_local_planner 
+add_library(base_local_planner
 	src/footprint_helper.cpp
 	src/goal_functions.cpp
 	src/map_cell.cpp

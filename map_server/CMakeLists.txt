@@ -6,7 +6,6 @@ find_package(catkin REQUIRED
             roscpp
             tf
             nav_msgs
-            rostest
         )
 
 find_package(Boost REQUIRED COMPONENTS system)
@@ -27,6 +26,7 @@ catkin_package(
         tf
         nav_msgs
 )
+
 include_directories( include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} )
 add_library(image_loader src/image_loader.cpp)
 target_link_libraries(image_loader SDL SDL_image ${Boost_LIBRARIES})
@@ -67,6 +67,8 @@ if(CATKIN_ENABLE_TESTING)
   )
   add_dependencies(rtest nav_msgs_gencpp)
 
+  # This has to be done after we've already built targets, or catkin variables get borked
+  find_package(rostest)
   add_rostest(test/rtest.xml)
 endif()
 
@@ -81,3 +83,9 @@ install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
   PATTERN ".svn" EXCLUDE)
+
+## Install excutable python script
+install( 
+    PROGRAMS
+      scripts/crop_map
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

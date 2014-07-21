@@ -20,7 +20,7 @@ void ObstacleLayer::onInitialize()
   rolling_window_ = layered_costmap_->isRolling();
 
   bool track_unknown_space;
-  nh.param("track_unknown_space", track_unknown_space, false);
+  nh.param("track_unknown_space", track_unknown_space, layered_costmap_->isTrackingUnknown());
   if(track_unknown_space)
     default_value_ = NO_INFORMATION;
   else
@@ -204,13 +204,6 @@ void ObstacleLayer::laserScanCallback(const sensor_msgs::LaserScanConstPtr& mess
   //project the laser into a point cloud
   sensor_msgs::PointCloud2 cloud;
   cloud.header = message->header;
-
-  if (!tf_->waitForTransform(message->header.frame_id, message->header.frame_id,
-		  message->header.stamp + ros::Duration(message->scan_time), ros::Duration(0.25)))
-  {
-	  ROS_DEBUG("Transform from %s to %s is not available.", message->header.frame_id.c_str(), global_frame_.c_str());
-	  return;
-  }
 
   //project the scan into a point cloud
   try
@@ -540,7 +533,7 @@ void ObstacleLayer::updateRaytraceBounds(double ox, double oy, double wx, double
 					 double* max_x, double* max_y)
 {
   double dx = wx-ox, dy = wy-oy;
-  double full_distance = sqrt( dx*dx+dy*dy );
+  double full_distance = hypot(dx, dy);
   double scale = std::min(1.0, range / full_distance);
   double ex = ox + dx * scale, ey = oy + dy * scale;
   touch(ex, ey, min_x, min_y, max_x, max_y);

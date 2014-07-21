@@ -99,6 +99,11 @@ public:
     return rolling_window_;
   }
 
+  bool isTrackingUnknown()
+  {
+    return costmap_.getDefaultValue()==costmap_2d::NO_INFORMATION;
+  }
+
   std::vector<boost::shared_ptr<Layer> >* getPlugins()
   {
     return &plugins_;
@@ -120,6 +125,11 @@ public:
     *xn = bxn_;
     *y0 = by0_;
     *yn = byn_;
+  }
+
+  bool isInitialized()
+  {
+      return initialized_;
   }
 
   /** @brief Updates the stored footprint, updates the circumscribed
@@ -158,6 +168,7 @@ private:
 
   std::vector<boost::shared_ptr<Layer> > plugins_;
 
+  bool initialized_;
   bool size_locked_;
   double circumscribed_radius_, inscribed_radius_;
   std::vector<geometry_msgs::Point> footprint_;

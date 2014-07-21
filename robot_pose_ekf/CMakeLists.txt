@@ -23,7 +23,6 @@ link_directories(${BFL_LIBRARY_DIRS})
 find_package(catkin REQUIRED
         COMPONENTS
             roscpp
-            rostest
             tf
             nav_msgs
             std_msgs
@@ -79,7 +78,12 @@ include(CMakeDetermineSystem)
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 if(CATKIN_ENABLE_TESTING)
 
-catkin_download_test_data(download_data_ekf_test2_indexed.bag http://download.ros.org/data/robot_pose_ekf/ekf_test2_indexed.bag FILENAME test/ekf_test2.bag MD5 71addef0ed900e05b301e0b4fdca99e2)
+catkin_download_test_data(
+  download_data_ekf_test2_indexed.bag
+  http://download.ros.org/data/robot_pose_ekf/ekf_test2_indexed.bag
+  DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_SHARE_DESTINATION}/test
+  MD5 71addef0ed900e05b301e0b4fdca99e2
+)
 add_executable(test_robot_pose_ekf test/test_robot_pose_ekf.cpp)
 target_link_libraries(test_robot_pose_ekf
     ${Boost_LIBRARIES}
@@ -87,9 +91,13 @@ target_link_libraries(test_robot_pose_ekf
     ${BFL_LIBRARIES}
     gtest
     )
-add_rostest(${CMAKE_CURRENT_SOURCE_DIR}/test/test_robot_pose_ekf.launch)
 
-catkin_download_test_data(download_data_zero_covariance.bag http://download.ros.org/data/robot_pose_ekf/zero_covariance_indexed.bag FILENAME test/zero_covariance.bag MD5 1f1f4e361a9e0b0f6b1379b2dd011088)
+catkin_download_test_data(
+  download_data_zero_covariance.bag
+  http://download.ros.org/data/robot_pose_ekf/zero_covariance_indexed.bag
+  DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_SHARE_DESTINATION}/test
+  MD5 1f1f4e361a9e0b0f6b1379b2dd011088
+)
 add_executable(test_robot_pose_ekf_zero_covariance test/test_robot_pose_ekf_zero_covariance.cpp)
 target_link_libraries(test_robot_pose_ekf_zero_covariance
     ${Boost_LIBRARIES}
@@ -97,6 +105,10 @@ target_link_libraries(test_robot_pose_ekf_zero_covariance
     ${BFL_LIBRARIES}
     gtest
     )
+
+# This has to be done after we've already built targets, or catkin variables get borked
+find_package(rostest)
+add_rostest(${CMAKE_CURRENT_SOURCE_DIR}/test/test_robot_pose_ekf.launch)
 add_rostest(${CMAKE_CURRENT_SOURCE_DIR}/test/test_robot_pose_ekf_zero_covariance.launch)
 
 endif(CATKIN_ENABLE_TESTING)
