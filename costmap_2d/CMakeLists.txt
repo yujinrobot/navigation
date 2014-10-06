@@ -62,7 +62,7 @@ catkin_package(
         include
         ${EIGEN_INCLUDE_DIRS}
         ${PCL_INCLUDE_DIRS}
-    LIBRARIES costmap_2d
+    LIBRARIES costmap_2d layers
     CATKIN_DEPENDS
         dynamic_reconfigure
         geometry_msgs
@@ -140,7 +140,6 @@ target_link_libraries(costmap_2d_node
 if(CATKIN_ENABLE_TESTING)
   # Find package test dependencies
   find_package(rostest REQUIRED)
-  find_package(gtest)
 
   # Add the test folder to the include directories
   include_directories(test)

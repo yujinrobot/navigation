@@ -134,6 +134,7 @@ class AmclNode
     void handleMapMessage(const nav_msgs::OccupancyGrid& msg);
     void freeMapDependentMemory();
     map_t* convertMap( const nav_msgs::OccupancyGrid& map_msg );
+    void updatePoseFromServer();
     void applyInitialPose();
 
     double getYaw(tf::Pose& t);
@@ -218,6 +219,9 @@ class AmclNode
     double alpha1_, alpha2_, alpha3_, alpha4_, alpha5_;
     double alpha_slow_, alpha_fast_;
     double z_hit_, z_short_, z_max_, z_rand_, sigma_hit_, lambda_short_;
+  //beam skip related params
+    bool do_beamskip_;
+    double beam_skip_distance_, beam_skip_threshold_, beam_skip_error_threshold_;
     double laser_likelihood_max_dist_;
     odom_model_t odom_model_type_;
     double init_pose_[3];
@@ -287,6 +291,11 @@ AmclNode::AmclNode() :
   private_nh_.param("odom_alpha3", alpha3_, 0.2);
   private_nh_.param("odom_alpha4", alpha4_, 0.2);
   private_nh_.param("odom_alpha5", alpha5_, 0.2);
+  
+  private_nh_.param("do_beamskip", do_beamskip_, false);
+  private_nh_.param("beam_skip_distance", beam_skip_distance_, 0.5);
+  private_nh_.param("beam_skip_threshold", beam_skip_threshold_, 0.3);
+  private_nh_.param("beam_skip_error_threshold_", beam_skip_error_threshold_, 0.9);
 
   private_nh_.param("laser_z_hit", z_hit_, 0.95);
   private_nh_.param("laser_z_short", z_short_, 0.1);
@@ -301,6 +310,9 @@ AmclNode::AmclNode() :
     laser_model_type_ = LASER_MODEL_BEAM;
   else if(tmp_model_type == "likelihood_field")
     laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD;
+  else if(tmp_model_type == "likelihood_field_prob"){
+    laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD_PROB;
+  }
   else
   {
     ROS_WARN("Unknown laser model type \"%s\"; defaulting to likelihood_field model",
@@ -338,44 +350,7 @@ AmclNode::AmclNode() :
 
   transform_tolerance_.fromSec(tmp_tol);
 
-  init_pose_[0] = 0.0;
-  init_pose_[1] = 0.0;
-  init_pose_[2] = 0.0;
-  init_cov_[0] = 0.5 * 0.5;
-  init_cov_[1] = 0.5 * 0.5;
-  init_cov_[2] = (M_PI/12.0) * (M_PI/12.0);
-  // Check for NAN on input from param server, #5239
-  double tmp_pos;
-  private_nh_.param("initial_pose_x", tmp_pos, init_pose_[0]);
-  if(!std::isnan(tmp_pos))
-    init_pose_[0] = tmp_pos;
-  else 
-    ROS_WARN("ignoring NAN in initial pose X position");
-  private_nh_.param("initial_pose_y", tmp_pos, init_pose_[1]);
-  if(!std::isnan(tmp_pos))
-    init_pose_[1] = tmp_pos;
-  else
-    ROS_WARN("ignoring NAN in initial pose Y position");
-  private_nh_.param("initial_pose_a", tmp_pos, init_pose_[2]);
-  if(!std::isnan(tmp_pos))
-    init_pose_[2] = tmp_pos;
-  else
-    ROS_WARN("ignoring NAN in initial pose Yaw");
-  private_nh_.param("initial_cov_xx", tmp_pos, init_cov_[0]);
-  if(!std::isnan(tmp_pos))
-    init_cov_[0] =tmp_pos;
-  else
-    ROS_WARN("ignoring NAN in initial covariance XX");
-  private_nh_.param("initial_cov_yy", tmp_pos, init_cov_[1]);
-  if(!std::isnan(tmp_pos))
-    init_cov_[1] = tmp_pos;
-  else
-    ROS_WARN("ignoring NAN in initial covariance YY");
-  private_nh_.param("initial_cov_aa", tmp_pos, init_cov_[2]);
-  if(!std::isnan(tmp_pos))
-    init_cov_[2] = tmp_pos;
-  else
-    ROS_WARN("ignoring NAN in initial covariance AA");
+  updatePoseFromServer();
 
   cloud_pub_interval.fromSec(1.0);
   tfb_ = new tf::TransformBroadcaster();
@@ -467,6 +442,8 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
     laser_model_type_ = LASER_MODEL_BEAM;
   else if(config.laser_model_type == "likelihood_field")
     laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD;
+  else if(config.laser_model_type == "likelihood_field_prob")
+    laser_model_type_ = LASER_MODEL_LIKELIHOOD_FIELD_PROB;
 
   if(config.odom_model_type == "diff")
     odom_model_type_ = ODOM_MODEL_DIFF;
@@ -488,6 +465,10 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   alpha_slow_ = config.recovery_alpha_slow;
   alpha_fast_ = config.recovery_alpha_fast;
   tf_broadcast_ = config.tf_broadcast;
+
+  do_beamskip_= config.do_beamskip; 
+  beam_skip_distance_ = config.beam_skip_distance; 
+  beam_skip_threshold_ = config.beam_skip_threshold; 
 
   pf_ = pf_alloc(min_particles_, max_particles_,
                  alpha_slow_, alpha_fast_,
@@ -523,8 +504,15 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   if(laser_model_type_ == LASER_MODEL_BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
                          sigma_hit_, lambda_short_, 0.0);
-  else
-  {
+  else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD_PROB){
+    ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
+    laser_->SetModelLikelihoodFieldProb(z_hit_, z_rand_, sigma_hit_,
+					laser_likelihood_max_dist_, 
+					do_beamskip_, beam_skip_distance_, 
+					beam_skip_threshold_, beam_skip_error_threshold_);
+    ROS_INFO("Done initializing likelihood field model with probabilities.");
+  }
+  else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD){
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
     laser_->SetModelLikelihoodField(z_hit_, z_rand_, sigma_hit_,
                                     laser_likelihood_max_dist_);
@@ -545,6 +533,48 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
                                                    this, _1));
 
   initial_pose_sub_ = nh_.subscribe("initialpose", 2, &AmclNode::initialPoseReceived, this);
+}
+
+void AmclNode::updatePoseFromServer()
+{
+  init_pose_[0] = 0.0;
+  init_pose_[1] = 0.0;
+  init_pose_[2] = 0.0;
+  init_cov_[0] = 0.5 * 0.5;
+  init_cov_[1] = 0.5 * 0.5;
+  init_cov_[2] = (M_PI/12.0) * (M_PI/12.0);
+  // Check for NAN on input from param server, #5239
+  double tmp_pos;
+  private_nh_.param("initial_pose_x", tmp_pos, init_pose_[0]);
+  if(!std::isnan(tmp_pos))
+    init_pose_[0] = tmp_pos;
+  else 
+    ROS_WARN("ignoring NAN in initial pose X position");
+  private_nh_.param("initial_pose_y", tmp_pos, init_pose_[1]);
+  if(!std::isnan(tmp_pos))
+    init_pose_[1] = tmp_pos;
+  else
+    ROS_WARN("ignoring NAN in initial pose Y position");
+  private_nh_.param("initial_pose_a", tmp_pos, init_pose_[2]);
+  if(!std::isnan(tmp_pos))
+    init_pose_[2] = tmp_pos;
+  else
+    ROS_WARN("ignoring NAN in initial pose Yaw");
+  private_nh_.param("initial_cov_xx", tmp_pos, init_cov_[0]);
+  if(!std::isnan(tmp_pos))
+    init_cov_[0] =tmp_pos;
+  else
+    ROS_WARN("ignoring NAN in initial covariance XX");
+  private_nh_.param("initial_cov_yy", tmp_pos, init_cov_[1]);
+  if(!std::isnan(tmp_pos))
+    init_cov_[1] = tmp_pos;
+  else
+    ROS_WARN("ignoring NAN in initial covariance YY");
+  private_nh_.param("initial_cov_aa", tmp_pos, init_cov_[2]);
+  if(!std::isnan(tmp_pos))
+    init_cov_[2] = tmp_pos;
+  else
+    ROS_WARN("ignoring NAN in initial covariance AA");	
 }
 
 void 
@@ -625,6 +655,7 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   pf_->pop_z = pf_z_;
 
   // Initialize the filter
+  updatePoseFromServer();
   pf_vector_t pf_init_pose_mean = pf_vector_zero();
   pf_init_pose_mean.v[0] = init_pose_[0];
   pf_init_pose_mean.v[1] = init_pose_[1];
@@ -649,6 +680,14 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   if(laser_model_type_ == LASER_MODEL_BEAM)
     laser_->SetModelBeam(z_hit_, z_short_, z_max_, z_rand_,
                          sigma_hit_, lambda_short_, 0.0);
+  else if(laser_model_type_ == LASER_MODEL_LIKELIHOOD_FIELD_PROB){
+    ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
+    laser_->SetModelLikelihoodFieldProb(z_hit_, z_rand_, sigma_hit_,
+					laser_likelihood_max_dist_, 
+					do_beamskip_, beam_skip_distance_, 
+					beam_skip_threshold_, beam_skip_error_threshold_);
+    ROS_INFO("Done initializing likelihood field model.");
+  }
   else
   {
     ROS_INFO("Initializing likelihood field model; this can take some time on large maps...");
