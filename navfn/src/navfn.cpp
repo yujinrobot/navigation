@@ -241,18 +241,22 @@ namespace navfn {
             // values in range 0 to 252 -> values from COST_NEUTRAL to COST_OBS_ROS.
             *cm = COST_OBS;
             int v = *cmap;
-            if (v < COST_OBS_ROS)
+            
+            if(v == COST_UNKNOWN_ROS && allow_unknown)
+            {
+              v = COST_OBS-1;
+              *cm = v;
+            }
+            else if (v < COST_OBS_ROS)
             {
               v = COST_NEUTRAL+COST_FACTOR*v;
               if (v >= COST_OBS)
                 v = COST_OBS-1;
               *cm = v;
             }
-            else if(v == COST_UNKNOWN_ROS && allow_unknown)
-            {
-              v = COST_OBS-1;
-              *cm = v;
-            }
+
+
+
           }
         }
       }
