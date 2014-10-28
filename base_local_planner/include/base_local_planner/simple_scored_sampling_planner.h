@@ -43,7 +43,6 @@
 #include <base_local_planner/trajectory_cost_function.h>
 #include <base_local_planner/trajectory_sample_generator.h>
 #include <base_local_planner/trajectory_search.h>
-#include "ros/ros.h"
 
 namespace base_local_planner {
 
@@ -74,19 +73,12 @@ public:
    */
   SimpleScoredSamplingPlanner(std::vector<TrajectorySampleGenerator*> gen_list, std::vector<TrajectoryCostFunction*>& critics, int max_samples = -1);
 
-    /**
-   * runs all scoring functions over the trajectory creating a weigthed sum
-   * of positive costs, aborting as soon as a negative cost are found or costs greater
-   * than positive best_traj_cost accumulated
-   */
-  double scoreTrajectory(Trajectory& traj, double best_traj_cost);
-  
   /**
    * runs all scoring functions over the trajectory creating a weigthed sum
    * of positive costs, aborting as soon as a negative cost are found or costs greater
    * than positive best_traj_cost accumulated
    */
-  double scoreTrajectory(Trajectory& traj, double best_traj_cost, std::vector<double>& bestCosts);
+  double scoreTrajectory(Trajectory& traj, double best_traj_cost);
 
   /**
    * Calls generator until generator has no more samples or max_samples is reached.
@@ -105,8 +97,6 @@ public:
 private:
   std::vector<TrajectorySampleGenerator*> gen_list_;
   std::vector<TrajectoryCostFunction*> critics_;
-  ros::NodeHandle nodeHandle_;
-  std::vector<ros::Publisher> BestCostsPublishers_;
 
   int max_samples_;
 };

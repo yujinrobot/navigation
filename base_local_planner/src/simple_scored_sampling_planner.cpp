@@ -38,62 +38,32 @@
 #include <base_local_planner/simple_scored_sampling_planner.h>
 
 #include <ros/console.h>
- #include <std_msgs/Float64.h> 
 
 namespace base_local_planner {
   
-  SimpleScoredSamplingPlanner::SimpleScoredSamplingPlanner(std::vector<TrajectorySampleGenerator*> gen_list, std::vector<TrajectoryCostFunction*>& critics, int max_samples) :
-    BestCostsPublishers_(critics.size(), nodeHandle_.advertise<std_msgs::Float64>("Temp", 100))
-  {
+  SimpleScoredSamplingPlanner::SimpleScoredSamplingPlanner(std::vector<TrajectorySampleGenerator*> gen_list, std::vector<TrajectoryCostFunction*>& critics, int max_samples) {
     max_samples_ = max_samples;
     gen_list_ = gen_list;
     critics_ = critics;
-    BestCostsPublishers_[0] = nodeHandle_.advertise<std_msgs::Float64>("Critic_oscillation", 100);
-    BestCostsPublishers_[1] = nodeHandle_.advertise<std_msgs::Float64>("Critic_obstacle", 100);
-    BestCostsPublishers_[2] = nodeHandle_.advertise<std_msgs::Float64>("Critic_goal_front", 100);
-    BestCostsPublishers_[3] = nodeHandle_.advertise<std_msgs::Float64>("Critic_alignment", 100);
-    BestCostsPublishers_[4] = nodeHandle_.advertise<std_msgs::Float64>("Critic_path", 100);
-    BestCostsPublishers_[5] = nodeHandle_.advertise<std_msgs::Float64>("Critic_goal", 100);
   }
 
-    double SimpleScoredSamplingPlanner::scoreTrajectory(Trajectory& traj, double best_traj_cost) {
-      std::vector<double> dummy(critics_.size(), 0.0);
-      
-      return scoreTrajectory(traj, best_traj_cost, dummy);
-    }
-  
-  double SimpleScoredSamplingPlanner::scoreTrajectory(Trajectory& traj, double best_traj_cost, std::vector<double>& bestCosts) {
+  double SimpleScoredSamplingPlanner::scoreTrajectory(Trajectory& traj, double best_traj_cost) {
     double traj_cost = 0;
     int gen_id = 0;
-    int criticId = -1;
-    std::vector<double> criticsCosts(critics_.size(), 0.0);
-    
     for(std::vector<TrajectoryCostFunction*>::iterator score_function = critics_.begin(); score_function != critics_.end(); ++score_function) {
-      criticId++;
-      
       TrajectoryCostFunction* score_function_p = *score_function;
       if (score_function_p->getScale() == 0) {
-	criticsCosts[criticId] = 0;
         continue;
       }
-      
-      double cost = score_function_p->scoreTrajectory(traj);      
-      
+      double cost = score_function_p->scoreTrajectory(traj);
       if (cost < 0) {
         ROS_DEBUG("Velocity %.3lf, %.3lf, %.3lf discarded by cost function  %d with cost: %f", traj.xv_, traj.yv_, traj.thetav_, gen_id, cost);
         traj_cost = cost;
-	
-	criticsCosts[criticId] = cost;
         break;
       }
       if (cost != 0) {
-// 	if(criticId == 3 || criticId == 2)
-// 	  cost = 0;
-// 	else
-	  cost *= score_function_p->getScale();
+        cost *= score_function_p->getScale();
       }
-      
-      criticsCosts[criticId] = cost;
       traj_cost += cost;
       if (best_traj_cost > 0) {
         // since we keep adding positives, once we are worse than the best, we will stay worse
@@ -103,11 +73,7 @@ namespace base_local_planner {
       }
       gen_id ++;
     }
-    
-    if(traj_cost < best_traj_cost)
-    {
-      bestCosts = criticsCosts;
-    }
+
 
     return traj_cost;
   }
@@ -118,8 +84,6 @@ namespace base_local_planner {
     double loop_traj_cost, best_traj_cost = -1;
     bool gen_success;
     int count, count_valid;
-    std::vector<double> bestCosts(critics_.size(), 0.0);
-
     for (std::vector<TrajectoryCostFunction*>::iterator loop_critic = critics_.begin(); loop_critic != critics_.end(); ++loop_critic) {
       TrajectoryCostFunction* loop_critic_p = *loop_critic;
       if (loop_critic_p->prepare() == false) {
@@ -138,7 +102,7 @@ namespace base_local_planner {
           // TODO use this for debugging
           continue;
         }
-        loop_traj_cost = scoreTrajectory(loop_traj, best_traj_cost, bestCosts);
+        loop_traj_cost = scoreTrajectory(loop_traj, best_traj_cost);
         if (all_explored != NULL) {
           loop_traj.cost_ = loop_traj_cost;
           all_explored->push_back(loop_traj);
@@ -151,7 +115,6 @@ namespace base_local_planner {
             best_traj = loop_traj;
           }
         }
-        // do not try fallback generators
         count++;
         if (max_samples_ > 0 && count >= max_samples_) {
           break;
@@ -175,19 +138,6 @@ namespace base_local_planner {
         break;
       }
     }
-    
-    
-    
-    for(int i = 0; i < BestCostsPublishers_.size(); ++i)
-    {
-//       ROS_WARN("bestCosts %d: %.2f", i, bestCosts[i]);
-      
-      if(bestCosts[i] > 100)
-	BestCostsPublishers_[i].publish(300);
-      else
-	BestCostsPublishers_[i].publish(bestCosts[i]);
-    }
-    
     return best_traj_cost >= 0;
   }
 
