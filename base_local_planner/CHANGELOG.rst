@@ -2,6 +2,17 @@
 Changelog for package base_local_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.11.13 (2014-10-02)
+--------------------
+
+1.11.12 (2014-10-01)
+--------------------
+* Bugfix uninitialised occ_cost variable usage
+  This fixes `#256 <https://github.com/ros-planning/navigation/issues/256>`_.
+* base_local_planner: adds waitForTransform
+* Fixed issue causing trajectory planner returning false to isGoalReach ed even when it's control thread finishes executing
+* Contributors: Daniel Stonier, Marcus Liebhardt, hes3pal
+
 1.11.11 (2014-07-23)
 --------------------
 * Minor code cleanup

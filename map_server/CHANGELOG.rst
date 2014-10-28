@@ -2,6 +2,16 @@
 Changelog for package map_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.11.13 (2014-10-02)
+--------------------
+
+1.11.12 (2014-10-01)
+--------------------
+* map_server: [style] alphabetize dependencies
+* map_server: remove vestigial export line
+  the removed line does not do anything in catkin
+* Contributors: William Woodall
+
 1.11.11 (2014-07-23)
 --------------------
 
