@@ -260,8 +260,6 @@ namespace voxel_grid {
             unsigned int &z_mask, unsigned int max_length = UINT_MAX)
       {
           unsigned int end = std::min(max_length, abs_da);
-//          if(end < 20)
-//            ROS_WARN("end: %d, %d, %d", end, max_length, abs_da);
 
           for(unsigned int i = 0; i < end; ++i)
           {
