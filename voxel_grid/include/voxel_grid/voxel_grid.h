@@ -257,24 +257,47 @@ namespace voxel_grid {
         inline void bresenham3D(ActionType at, OffA off_a, OffB off_b, OffC off_c,
             unsigned int abs_da, unsigned int abs_db, unsigned int abs_dc,
             int error_b, int error_c, int offset_a, int offset_b, int offset_c, unsigned int &offset,
-            unsigned int &z_mask, unsigned int max_length = UINT_MAX){
+            unsigned int &z_mask, unsigned int max_length = UINT_MAX)
+      {
           unsigned int end = std::min(max_length, abs_da);
-          for(unsigned int i = 0; i < end; ++i){
-            at(offset, z_mask);
-            off_a(offset_a);
-            error_b += abs_db;
-            error_c += abs_dc;
-            if((unsigned int)error_b >= abs_da){
-              off_b(offset_b);
-              error_b -= abs_da;
-            }
-            if((unsigned int)error_c >= abs_da){
-              off_c(offset_c);
-              error_c -= abs_da;
-            }
+
+          for(unsigned int i = 0; i < end; ++i)
+          {
+              at(offset, z_mask);
+              off_a(offset_a);
+              error_b += abs_db;
+              error_c += abs_dc;
+
+              if((unsigned int)error_b >= abs_da)
+              {
+                //adjusted not original Bresenham
+                at(offset, z_mask);     //set voxel on the same line
+
+                off_b(offset_b);        //go one line up
+                off_a(-offset_a);       //go one column back
+                at(offset, z_mask);     //set voxel
+
+                off_a(offset_a);        //go back to next column
+
+                error_b -= abs_da;
+              }
+
+              if((unsigned int)error_c >= abs_da)
+              {
+                //adjusted not original Bresenham
+                at(offset, z_mask);     //set voxel on the same line
+
+                off_c(offset_c);        //go one line up
+                off_a(-offset_a);       //go one column back
+                at(offset, z_mask);     //set voxel
+
+                off_a(offset_a);        //go back to next column
+
+                error_c -= abs_da;
+              }
           }
           at(offset, z_mask);
-        }
+      }
 
       inline int sign(int i){
         return i > 0 ? 1 : -1;
@@ -365,7 +388,7 @@ namespace voxel_grid {
             offset_val > 0 ? z_mask_ <<= 1 : z_mask_ >>= 1;
           }
         private:
-          unsigned int & z_mask_;
+          unsigned int &z_mask_;
       };
 
   };
