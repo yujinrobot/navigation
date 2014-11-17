@@ -46,7 +46,7 @@
 #include <algorithm>
 #include <ros/console.h>
 #include <ros/assert.h>
-
+#include <voxel_grid/grid_mask_updater.h>
 
 /**
  * @class VoxelGrid
@@ -188,6 +188,34 @@ namespace voxel_grid {
           unsigned int unknown_threshold, unsigned int mark_threshold, 
           unsigned char free_cost = 0, unsigned char unknown_cost = 255, unsigned int max_length = UINT_MAX);
 
+      /**
+       * @brief Updates the given padded_grid_mask and updated_columns by raytracing
+       *
+       * The raytracing works with the Bresenham algorithm on discrete cells.
+       * raytrace_corner_cases includes additional cells at the transition of one row / column to the next:
+       *
+       * |   |   |   |   |
+       * -----------------  Legend:
+       * |   | # | = | = |          = : Cells added by original Bresenham
+       * -----------------          # : Additional cells added with raytrace_corner_cases
+       * | = | = | # |   |
+       * -----------------
+       *
+       * @param Grid of masking bits which gets updated
+       * @param Grid with boolean on if column at that position was updated
+       * @param x-position of ray start
+       * @param y-position of ray start
+       * @param z-position of ray start
+       * @param x-position of ray end
+       * @param y-position of ray end
+       * @param z-position of ray end
+       * @param length at which to stop the raytracing (raytracing max range)
+       * @param Include corner cases or not, see function description
+       * @param Add padding to the ray which includes the 4 neighbouring cells
+      **/
+      void updateClearingMask(boost::shared_ptr<uint32_t[]>& padded_grid_mask, boost::shared_ptr<bool[]>& updated_columns, double x0, double y0, double z0, double x1, double y1,
+                              double z1, unsigned int max_length = UINT_MAX, bool raytrace_corner_cases = false, bool padded_raytracing = false);
+
       VoxelStatus getVoxel(unsigned int x, unsigned int y, unsigned int z);
       VoxelStatus getVoxelColumn(unsigned int x, unsigned int y,
           unsigned int unknown_threshold = 0, unsigned int marked_threshold = 0); //Are there any obstacles at that (x, y) location in the grid?
@@ -250,9 +278,44 @@ namespace voxel_grid {
           bresenham3D(at, z_off, grid_off, grid_off, abs_dz, abs_dx, abs_dy, error_x, error_y, offset_dz, offset_dx, offset_dy, offset, z_mask, (unsigned int)(scale * abs_dz));
         }
 
+      void updateGrid(boost::shared_ptr<uint32_t[]>& padded_grid_mask, bool padded_raytracing = false);
+      void updateCostmap(unsigned char* costmap, boost::shared_ptr<bool[]>& updated_columns, unsigned int unknown_clear_threshold,
+                         unsigned int marked_clear_threshold, unsigned char free_cost = 0, unsigned char unknown_cost = 255,
+                         bool padded_raytracing = false);
+
     private:
 
-      //the real work is done here... 3D bresenham implementation
+      //the real work is done here... original 3D Bresenham implementation
+      template <class ActionType, class OffA, class OffB, class OffC>
+        inline void bresenham3DOriginal(ActionType at, OffA off_a, OffB off_b, OffC off_c,
+            unsigned int abs_da, unsigned int abs_db, unsigned int abs_dc,
+            int error_b, int error_c, int offset_a, int offset_b, int offset_c, unsigned int &offset,
+            unsigned int &z_mask, unsigned int max_length = UINT_MAX)
+      {
+          unsigned int end = std::min(max_length, abs_da);
+
+          for(unsigned int i = 0; i < end; ++i)
+          {
+              at(offset, z_mask);
+              off_a(offset_a);
+              error_b += abs_db;
+              error_c += abs_dc;
+
+              if((unsigned int)error_b >= abs_da)
+              {
+                off_b(offset_b);        //go one line up
+                error_b -= abs_da;
+              }
+
+              if((unsigned int)error_c >= abs_da)
+              {
+                off_c(offset_c);        //go one line up
+                error_c -= abs_da;
+              }
+          }
+          at(offset, z_mask);
+      }
+
       template <class ActionType, class OffA, class OffB, class OffC>
         inline void bresenham3D(ActionType at, OffA off_a, OffB off_b, OffC off_c,
             unsigned int abs_da, unsigned int abs_db, unsigned int abs_dc,
