@@ -126,12 +126,7 @@ void VoxelLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, 
 
       //now we need to compute the map coordinates for the observation
       unsigned int mx, my, mz;
-      if (cloud.points[i].z < origin_z_)
-      {
-        if (!worldToMap3D(cloud.points[i].x, cloud.points[i].y, origin_z_, mx, my, mz))
-          continue;
-      }
-      else if (!worldToMap3D(cloud.points[i].x, cloud.points[i].y, cloud.points[i].z, mx, my, mz))
+      if (!worldToMap3D(cloud.points[i].x, cloud.points[i].y, cloud.points[i].z, mx, my, mz))
       {
         continue;
       }
@@ -284,54 +279,52 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     double wpy = clearing_observation.cloud_->points[i].y;
     double wpz = clearing_observation.cloud_->points[i].z;
 
-    double distance = dist(ox, oy, oz, wpx, wpy, wpz);
-    double scaling_fact = 1.0;
-    scaling_fact = std::max(std::min(scaling_fact, (distance - 2 * resolution_) / distance), 0.0);
-    wpx = scaling_fact * (wpx - ox) + ox;
-    wpy = scaling_fact * (wpy - oy) + oy;
-    wpz = scaling_fact * (wpz - oz) + oz;
-
-    double a = wpx - ox;
-    double b = wpy - oy;
-    double c = wpz - oz;
-    double t = 1.0;
+    double dx = wpx - ox;
+    double dy = wpy - oy;
+    double dz = wpz - oz;
+    double scaling = 1.0;
 
     //we can only raytrace to a maximum z height
     if (wpz > max_obstacle_height_)
     {
       //we know we want the vector's z value to be max_z
-      t = std::max(0.0, std::min(t, (max_obstacle_height_ - 0.01 - oz) / c));
+      scaling = std::max(0.0, std::min(scaling, (max_obstacle_height_ - oz) / dz));
     }
     //and we can only raytrace down to the floor
     else if (wpz < origin_z_)
     {
       //we know we want the vector's z value to be 0.0
-      t = std::min(t, (origin_z_ - oz) / c);
+      scaling = std::min(scaling, (origin_z_ - oz) / dz);
     }
 
     //the minimum value to raytrace from is the origin
     if (wpx < origin_x_)
     {
-      t = std::min(t, (origin_x_ - ox) / a);
+      scaling = std::min(scaling, (origin_x_ - ox) / dx);
     }
     if (wpy < origin_y_)
     {
-      t = std::min(t, (origin_y_ - oy) / b);
+      scaling = std::min(scaling, (origin_y_ - oy) / dy);
     }
 
     //the maximum value to raytrace to is the end of the map
     if (wpx > map_end_x)
     {
-      t = std::min(t, (map_end_x - ox) / a);
+      scaling = std::min(scaling, (map_end_x - ox) / dx);
     }
     if (wpy > map_end_y)
     {
-      t = std::min(t, (map_end_y - oy) / b);
+      scaling = std::min(scaling, (map_end_y - oy) / dy);
     }
 
-    wpx = ox + a * t;
-    wpy = oy + b * t;
-    wpz = oz + c * t;
+    if (dx * dx + dy * dy + dz * dz > clearing_observation.raytrace_range_ * clearing_observation.raytrace_range_)
+    {
+      scaling = std::min(scaling, clearing_observation.raytrace_range_ / sqrt(dx * dx + dy * dy + dz * dz));
+    }
+
+    wpx = ox + dx * scaling;
+    wpy = oy + dy * scaling;
+    wpz = oz + dz * scaling;
 
     double point_x, point_y, point_z;
     if (worldToMap3DFloat(wpx, wpy, wpz, point_x, point_y, point_z))

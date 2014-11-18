@@ -37,10 +37,10 @@ public:
     updated_columns_[offset] = true;
 
     //padding z
-    grid_mask_[offset] |= z_mask << 1; //don't need to check for overflow because & ~(0) changes nothing, hopefully
-    grid_mask_[offset] |= z_mask >> 1; //don't need to check for underflow because & ~(0) changes nothing
+    grid_mask_[offset] |= z_mask << 1; //overflow can happen, is treated later
+    grid_mask_[offset] |= z_mask >> 1; //underflow can happen, is treated later
 
-    //padding y, data is padded so no under / overflow should happen
+    //padding y, data is padded so no under / overflow can happen
     grid_mask_[offset + offset_y_] |= z_mask;
     updated_columns_[offset + offset_y_] = true;
     grid_mask_[offset - offset_y_] |= z_mask;
@@ -67,10 +67,10 @@ public:
     updated_columns_[offset] = true;
 
     //padding z
-    grid_mask_[offset] |= z_mask << 1; //don't need to check for overflow because & ~(0) changes nothing
-    grid_mask_[offset] |= z_mask >> 1; //don't need to check for underflow because & ~(0) changes nothing
+    grid_mask_[offset] |= z_mask << 1; //overflow can happen, is treated later
+    grid_mask_[offset] |= z_mask >> 1; //underflow can happen, is treated later
 
-    //padding x, data is padded so no under / overflow should happen
+    //padding x, data is padded so no under / overflow can happen
     grid_mask_[offset + 1] |= z_mask;
     updated_columns_[offset + 1] = true;
     grid_mask_[offset - 1] |= z_mask;
