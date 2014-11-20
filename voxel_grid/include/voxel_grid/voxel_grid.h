@@ -203,6 +203,7 @@ namespace voxel_grid {
        *
        * @param Grid of masking bits which gets updated
        * @param Grid with boolean on if column at that position was updated
+       * @param Area width of updated_columns and grid_mask
        * @param x-position of ray start
        * @param y-position of ray start
        * @param z-position of ray start
@@ -213,7 +214,7 @@ namespace voxel_grid {
        * @param Include corner cases or not, see function description
        * @param Add padding to the ray which includes the 4 neighbouring cells
       **/
-      void updateClearingMask(boost::shared_ptr<uint32_t[]>& padded_grid_mask, boost::shared_ptr<bool[]>& updated_columns, double x0, double y0, double z0, double x1, double y1,
+      void updateClearingMask(boost::shared_ptr<uint32_t[]>& grid_mask, boost::shared_ptr<bool[]>& updated_columns, unsigned int updated_area_width, double x0, double y0, double z0, double x1, double y1,
                               double z1, unsigned int max_length = UINT_MAX, bool raytrace_corner_cases = false, bool padded_raytracing = false);
 
       VoxelStatus getVoxel(unsigned int x, unsigned int y, unsigned int z);
@@ -278,10 +279,13 @@ namespace voxel_grid {
           bresenham3D(at, z_off, grid_off, grid_off, abs_dz, abs_dx, abs_dy, error_x, error_y, offset_dz, offset_dx, offset_dy, offset, z_mask, (unsigned int)(scale * abs_dz));
         }
 
-      void updateGrid(boost::shared_ptr<uint32_t[]>& padded_grid_mask, bool padded_raytracing = false);
-      void updateCostmap(unsigned char* costmap, boost::shared_ptr<bool[]>& updated_columns, unsigned int unknown_clear_threshold,
-                         unsigned int marked_clear_threshold, unsigned char free_cost = 0, unsigned char unknown_cost = 255,
-                         bool padded_raytracing = false);
+
+      void updateGrid(boost::shared_ptr<uint32_t[]>& grid_mask, unsigned int updated_area_width, int offset_x,
+                      int offset_y);
+      void updateCostmap(unsigned char* costmap, boost::shared_ptr<bool[]>& updated_columns,
+                         unsigned int updated_area_width, int offset_x, int offset_y,
+                         unsigned int unknown_clear_threshold, unsigned int marked_clear_threshold,
+                         unsigned char free_cost = 0, unsigned char unknown_cost = 255);
 
     private:
 

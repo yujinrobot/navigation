@@ -245,28 +245,20 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     clearing_endpoints_.points.reserve( clearing_observation.cloud_->points.size() );
   }
 
-  unsigned int voxel_grid_size = voxel_grid_.sizeX() * voxel_grid_.sizeY();
+  unsigned int padding_size = 1; //to handled padded raytracing
+  unsigned int update_area_center = floor(max_raytrace_range_ / resolution_) + padding_size;
+  unsigned int updated_area_width = floor(max_raytrace_range_ / resolution_) * 2 + 1 + 2 * padding_size;
+  unsigned int max_updated_area_size = pow(updated_area_width, 2); // | padding | raytrace | center | raytrace | padding
 
-  unsigned int padding_size = 0;
-
-  if(padded_raytracing_)
-    padding_size = 1; //current code (grid_updater.h) can only handle 1
-
-  unsigned int padded_voxel_grid_size = voxel_grid_size;
-  padded_voxel_grid_size += voxel_grid_.sizeX() * 2 * padding_size; //upper and lower padding
-  padded_voxel_grid_size += voxel_grid_.sizeY() * 2 * padding_size; //left and right padding
-  padded_voxel_grid_size += padding_size * padding_size * 4; //add the four corners
-
-  boost::shared_ptr<uint32_t[]> padded_voxel_grid_mask(new uint32_t[padded_voxel_grid_size]);
+  boost::shared_ptr<uint32_t[]> padded_voxel_grid_mask(new uint32_t[max_updated_area_size]);
   uint32_t empty_mask = (uint32_t)0;
 
-  for (int i = 0; i < padded_voxel_grid_size; ++i)
+  for (int i = 0; i < max_updated_area_size; ++i)
     padded_voxel_grid_mask[i] = empty_mask;
 
+  boost::shared_ptr<bool[]> updatedColumns(new bool[max_updated_area_size]);
 
-  boost::shared_ptr<bool[]> updatedColumns(new bool[padded_voxel_grid_size]);
-
-  for (int i = 0; i < padded_voxel_grid_size; ++i)
+  for (int i = 0; i < max_updated_area_size; ++i)
     updatedColumns[i] = false;
 
   //we can pre-compute the enpoints of the map outside of the inner loop... we'll need these later
@@ -331,7 +323,10 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     {
       unsigned int cell_raytrace_range = cellDistance(clearing_observation.raytrace_range_);
 
-      voxel_grid_.updateClearingMask(padded_voxel_grid_mask, updatedColumns, sensor_x, sensor_y, sensor_z, point_x, point_y, point_z, cell_raytrace_range, raytrace_corner_cases_, padded_raytracing_);
+      voxel_grid_.updateClearingMask(padded_voxel_grid_mask, updatedColumns, updated_area_width, update_area_center,
+                                     update_area_center, sensor_z, update_area_center + point_x - (int)sensor_x,
+                                     update_area_center + point_y - (int)sensor_y, point_z, cell_raytrace_range,
+                                     raytrace_corner_cases_, padded_raytracing_);
 
       updateRaytraceBounds(ox, oy, wpx, wpy, clearing_observation.raytrace_range_, min_x, min_y, max_x, max_y);
 
@@ -346,8 +341,8 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     }
   }
 
-  voxel_grid_.updateGrid(padded_voxel_grid_mask, padded_raytracing_);
-  voxel_grid_.updateCostmap(costmap_, updatedColumns, unknown_threshold_, mark_threshold_, FREE_SPACE, NO_INFORMATION, padded_raytracing_);
+  voxel_grid_.updateGrid(padded_voxel_grid_mask, updated_area_width, (int)sensor_x - update_area_center, (int)sensor_y - update_area_center);
+  voxel_grid_.updateCostmap(costmap_, updatedColumns, updated_area_width, (int)sensor_x - update_area_center, (int)sensor_y - update_area_center, unknown_threshold_, mark_threshold_, FREE_SPACE, NO_INFORMATION);
 
   if( publish_clearing_points )
   {

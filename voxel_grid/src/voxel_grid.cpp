@@ -141,23 +141,11 @@ namespace voxel_grid {
     raytraceLine(cvm, x0, y0, z0, x1, y1, z1, max_length);
   }
 
-  void VoxelGrid::updateClearingMask(boost::shared_ptr<uint32_t[]>& padded_grid_mask, boost::shared_ptr<bool[]>& updated_columns, double x0, double y0, double z0,
-                                     double x1, double y1, double z1, unsigned int max_length, bool raytrace_corner_cases, bool padded_raytracing)
+  void VoxelGrid::updateClearingMask(boost::shared_ptr<uint32_t[]>& grid_mask,
+                                     boost::shared_ptr<bool[]>& updated_columns, unsigned int updated_area_width,
+                                     double x0, double y0, double z0, double x1, double y1, double z1,
+                                     unsigned int max_length, bool raytrace_corner_cases, bool padded_raytracing)
   {
-    if (x0 >= size_x_ || y0 >= size_y_ || z0 >= size_z_ || x1 >= size_x_ || y1 >= size_y_ || z1 >= size_z_)
-    {
-      ROS_DEBUG("Error, line endpoint out of bounds. (%.2f, %.2f, %.2f) to (%.2f, %.2f, %.2f),  size: (%d, %d, %d)", x0,
-                y0, z0, x1, y1, z1, size_x_, size_y_, size_z_);
-      return;
-    }
-
-    unsigned int padding_size = 0;
-
-    if(padded_raytracing)
-      padding_size = 1;
-
-    unsigned int y_offset = size_x_ + (padding_size * 2);
-
     int dx = int(x1) - int(x0);
     int dy = int(y1) - int(y0);
     int dz = int(z1) - int(z0);
@@ -167,11 +155,11 @@ namespace voxel_grid {
     unsigned int abs_dz = abs(dz);
 
     int offset_dx = sign(dx);
-    int offset_dy = sign(dy) * y_offset;
+    int offset_dy = sign(dy) * updated_area_width;
     int offset_dz = sign(dz);
 
     unsigned int z_mask = ((1 << 16) | 1) << (unsigned int)z0;
-    unsigned int offset = (unsigned int)y0 * y_offset + (unsigned int)x0;
+    unsigned int offset = (unsigned int)y0 * updated_area_width + (unsigned int)x0;
 
     GridOffset grid_off(offset);
     ZOffset z_off(z_mask);
@@ -190,13 +178,13 @@ namespace voxel_grid {
       {
         if (padded_raytracing)
         {
-          bresenham3DOriginal(GridMaskUpdaterX(padded_grid_mask, updated_columns, y_offset), grid_off, grid_off, z_off,
+          bresenham3DOriginal(GridMaskUpdaterX(grid_mask, updated_columns, updated_area_width), grid_off, grid_off, z_off,
                               abs_dx, abs_dy, abs_dz, error_y, error_z, offset_dx, offset_dy, offset_dz, offset, z_mask,
                               (unsigned int)(scale * abs_dx));
           return;
         }
 
-        bresenham3DOriginal(GridMaskUpdater(padded_grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dx, abs_dy,
+        bresenham3DOriginal(GridMaskUpdater(grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dx, abs_dy,
                             abs_dz, error_y, error_z, offset_dx, offset_dy, offset_dz, offset, z_mask,
                             (unsigned int)(scale * abs_dx));
         return;
@@ -204,13 +192,13 @@ namespace voxel_grid {
 
       if (padded_raytracing)
       {
-        bresenham3D(GridMaskUpdaterX(padded_grid_mask, updated_columns, y_offset), grid_off, grid_off, z_off, abs_dx,
+        bresenham3D(GridMaskUpdaterX(grid_mask, updated_columns, updated_area_width), grid_off, grid_off, z_off, abs_dx,
                     abs_dy, abs_dz, error_y, error_z, offset_dx, offset_dy, offset_dz, offset, z_mask,
                     (unsigned int)(scale * abs_dx));
         return;
       }
 
-      bresenham3D(GridMaskUpdater(padded_grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dx, abs_dy, abs_dz,
+      bresenham3D(GridMaskUpdater(grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dx, abs_dy, abs_dz,
                   error_y, error_z, offset_dx, offset_dy, offset_dz, offset, z_mask, (unsigned int)(scale * abs_dx));
       return;
     }
@@ -225,13 +213,13 @@ namespace voxel_grid {
       {
         if (padded_raytracing)
         {
-          bresenham3DOriginal(GridMaskUpdaterY(padded_grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy,
+          bresenham3DOriginal(GridMaskUpdaterY(grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy,
                               abs_dx, abs_dz, error_x, error_z, offset_dy, offset_dx, offset_dz, offset, z_mask,
                               (unsigned int)(scale * abs_dy));
           return;
         }
 
-        bresenham3DOriginal(GridMaskUpdater(padded_grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy, abs_dx,
+        bresenham3DOriginal(GridMaskUpdater(grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy, abs_dx,
                             abs_dz, error_x, error_z, offset_dy, offset_dx, offset_dz, offset, z_mask,
                             (unsigned int)(scale * abs_dy));
         return;
@@ -239,13 +227,13 @@ namespace voxel_grid {
 
       if (padded_raytracing)
       {
-        bresenham3D(GridMaskUpdaterY(padded_grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy, abs_dx,
+        bresenham3D(GridMaskUpdaterY(grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy, abs_dx,
                     abs_dz, error_x, error_z, offset_dy, offset_dx, offset_dz, offset, z_mask,
                     (unsigned int)(scale * abs_dy));
         return;
       }
 
-      bresenham3D(GridMaskUpdater(padded_grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy, abs_dx, abs_dz,
+      bresenham3D(GridMaskUpdater(grid_mask, updated_columns), grid_off, grid_off, z_off, abs_dy, abs_dx, abs_dz,
                   error_x, error_z, offset_dy, offset_dx, offset_dz, offset, z_mask, (unsigned int)(scale * abs_dy));
       return;
     }
@@ -258,13 +246,13 @@ namespace voxel_grid {
     {
       if (padded_raytracing)
       {
-        bresenham3DOriginal(GridMaskUpdaterZ(padded_grid_mask, updated_columns, y_offset), z_off, grid_off, grid_off,
+        bresenham3DOriginal(GridMaskUpdaterZ(grid_mask, updated_columns, updated_area_width), z_off, grid_off, grid_off,
                             abs_dz, abs_dx, abs_dy, error_x, error_y, offset_dz, offset_dx, offset_dy, offset, z_mask,
                             (unsigned int)(scale * abs_dz));
         return;
       }
 
-      bresenham3DOriginal(GridMaskUpdater(padded_grid_mask, updated_columns), z_off, grid_off, grid_off, abs_dz, abs_dx,
+      bresenham3DOriginal(GridMaskUpdater(grid_mask, updated_columns), z_off, grid_off, grid_off, abs_dz, abs_dx,
                           abs_dy, error_x, error_y, offset_dz, offset_dx, offset_dy, offset, z_mask,
                           (unsigned int)(scale * abs_dz));
       return;
@@ -272,25 +260,20 @@ namespace voxel_grid {
 
     if (padded_raytracing)
     {
-      bresenham3D(GridMaskUpdaterZ(padded_grid_mask, updated_columns, y_offset), z_off, grid_off, grid_off, abs_dz,
+      bresenham3D(GridMaskUpdaterZ(grid_mask, updated_columns, updated_area_width), z_off, grid_off, grid_off, abs_dz,
                   abs_dx, abs_dy, error_x, error_y, offset_dz, offset_dx, offset_dy, offset, z_mask,
                   (unsigned int)(scale * abs_dz));
       return;
     }
 
-    bresenham3D(GridMaskUpdater(padded_grid_mask, updated_columns), z_off, grid_off, grid_off, abs_dz, abs_dx, abs_dy,
+    bresenham3D(GridMaskUpdater(grid_mask, updated_columns), z_off, grid_off, grid_off, abs_dz, abs_dx, abs_dy,
                 error_x, error_y, offset_dz, offset_dx, offset_dy, offset, z_mask, (unsigned int)(scale * abs_dz));
     return;
   }
 
-  void VoxelGrid::updateGrid(boost::shared_ptr<uint32_t[]>& padded_grid_mask, bool padded_raytracing)
+  void VoxelGrid::updateGrid(boost::shared_ptr<uint32_t[]>& grid_mask, unsigned int updated_area_width, int offset_x, int offset_y)
   {
     uint32_t mask;
-
-    unsigned int padding_size = 0;
-
-    if(padded_raytracing)
-      padding_size = 1;
 
     //if only one of this bits is set, this means we are not clearing it
     //so this means underflow or overflow happened
@@ -300,17 +283,40 @@ namespace voxel_grid {
     uint32_t mask_lower_bits = ~((uint32_t)0) >> 16;
 
     unsigned int linear_index = 0;
-    unsigned int linear_index_padded = 0;
-    unsigned int padding_offset_y = size_x_ + 2 * padding_size;
+    unsigned int linear_index_offseted = 0;
 
-    for (unsigned int row_index = 0; row_index < size_y_; ++row_index)
+    int x = 0;
+    int y = 0;
+
+    for (unsigned int row_index = 0; row_index < updated_area_width; ++row_index)
     {
-      linear_index = row_index * size_x_;
-      linear_index_padded = (row_index + padding_size) * padding_offset_y + padding_size;
+      linear_index = row_index * updated_area_width;
+      y = row_index + offset_y;
 
-      for (unsigned int column_index = 0; column_index < size_x_; ++column_index)
+      if(y < 0)
+        continue;
+
+      if(y > size_y_)
+        break;
+
+      x = offset_x;
+
+      linear_index_offseted = y * size_x_ + x;
+
+      for (unsigned int column_index = 0; column_index < updated_area_width; ++column_index)
       {
-        mask = padded_grid_mask[linear_index_padded];
+        if(x < 0)
+        {
+          x++;
+          linear_index_offseted++;
+          linear_index++;
+          continue;
+        }
+
+        if(x > size_x_)
+          break;
+
+        mask = grid_mask[linear_index];
 
         //if only one of mask_overflow_test bits is set we are not clearing the cell
         //so we had an overflow
@@ -329,51 +335,58 @@ namespace voxel_grid {
         ///TODO: Remove this after thorough testing
         if ((mask >> 16) ^ (mask & mask_lower_bits))
         {
-          ROS_ERROR("Error in voxel grid: Clearing ended up wrong. Seems like there is an bug in the raytracing with thick rays algorithm!");
+          ROS_ERROR("Error in voxel grid: Clearing ended up wrong. Seems like there is an bug in the raytracing with padded rays algorithm!");
 
           std::bitset<32> pretty_mask(mask);
           std::cout << "Clearing Mask:" << pretty_mask << std::endl;
 
+          x++;
+          linear_index_offseted++;
           linear_index++;
-          linear_index_padded++;
           continue;
         }
 
-        data_[linear_index] &= ~(mask);
+        data_[linear_index_offseted] &= ~(mask);
 
+        x++;
+        linear_index_offseted++;
         linear_index++;
-        linear_index_padded++;
       }
     }
   }
 
-  void VoxelGrid::updateCostmap(unsigned char* costmap, boost::shared_ptr<bool[]>& updated_columns, unsigned int unknown_clear_threshold,
-                   unsigned int marked_clear_threshold, unsigned char free_cost, unsigned char unknown_cost, bool padded_raytracing)
+  void VoxelGrid::updateCostmap(unsigned char* costmap, boost::shared_ptr<bool[]>& updated_columns,
+                                unsigned int updated_area_width, int offset_x, int offset_y,
+                                unsigned int unknown_clear_threshold, unsigned int marked_clear_threshold,
+                                unsigned char free_cost, unsigned char unknown_cost)
   {
-    unsigned int padding_size = 0;
-
-    if(padded_raytracing)
-      padding_size = 1;
-
     unsigned int linear_index = 0;
-    unsigned int linear_index_padded = 0;
-    unsigned int padding_offset_y = size_x_ + (2 * padding_size);
+    unsigned int linear_index_offseted = 0;
+    int y = 0;
 
-    for (unsigned int row_index = 0; row_index < size_y_; ++row_index)
+    for (unsigned int row_index = 0; row_index < updated_area_width; ++row_index)
     {
-      linear_index = row_index * size_x_;
-      linear_index_padded = (row_index + padding_size) * padding_offset_y + padding_size;
+      linear_index = row_index * updated_area_width;
+      y = row_index + offset_y;
 
-      for (unsigned int column_index = 0; column_index < size_x_; ++column_index)
+      if(y < 0)
+        continue;
+
+      if(y > size_y_)
+        break;
+
+      linear_index_offseted = y * size_x_ + offset_x;
+
+      for (unsigned int column_index = 0; column_index < updated_area_width; ++column_index)
       {
-        if (!updated_columns[linear_index_padded])
+        if (!updated_columns[linear_index])
         {
           linear_index++;
-          linear_index_padded++;
+          linear_index_offseted++;
           continue;
         }
 
-        uint32_t column_occupation = data_[linear_index];
+        uint32_t column_occupation = data_[linear_index_offseted];
 
         unsigned int unknown_bits = uint16_t(column_occupation >> 16) ^ uint16_t(column_occupation);
         unsigned int marked_bits = column_occupation >> 16;
@@ -382,16 +395,16 @@ namespace voxel_grid {
         {
           if (bitsBelowThreshold(unknown_bits, unknown_clear_threshold))
           {
-            costmap[linear_index] = free_cost;
+            costmap[linear_index_offseted] = free_cost;
           }
           else
           {
-            costmap[linear_index] = unknown_cost;
+            costmap[linear_index_offseted] = unknown_cost;
           }
         }
 
+        linear_index_offseted++;
         linear_index++;
-        linear_index_padded++;
       }
     }
   }
