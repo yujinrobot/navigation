@@ -169,6 +169,8 @@ protected:
 
 private:
   void reconfigureCB(costmap_2d::ObstaclePluginConfig &config, uint32_t level);
+protected:
+  double max_raytrace_range_;
 };
 }
 #endif

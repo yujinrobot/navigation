@@ -27,6 +27,8 @@ void VoxelLayer::onInitialize()
   clearing_endpoints_pub_ = private_nh.advertise<sensor_msgs::PointCloud>( "clearing_endpoints", 1 );
   combination_method_ = 1;
 
+  private_nh.param("raytrace_corner_cases", raytrace_corner_cases_, false);
+  private_nh.param("padded_raytracing", padded_raytracing_, false);
 }
 
 void VoxelLayer::setupDynamicReconfigure(ros::NodeHandle& nh)
@@ -124,12 +126,7 @@ void VoxelLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, 
 
       //now we need to compute the map coordinates for the observation
       unsigned int mx, my, mz;
-      if (cloud.points[i].z < origin_z_)
-      {
-        if (!worldToMap3D(cloud.points[i].x, cloud.points[i].y, origin_z_, mx, my, mz))
-          continue;
-      }
-      else if (!worldToMap3D(cloud.points[i].x, cloud.points[i].y, cloud.points[i].z, mx, my, mz))
+      if (!worldToMap3D(cloud.points[i].x, cloud.points[i].y, cloud.points[i].z, mx, my, mz))
       {
         continue;
       }
@@ -248,6 +245,22 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     clearing_endpoints_.points.reserve( clearing_observation.cloud_->points.size() );
   }
 
+  unsigned int padding_size = 1; //to handled padded raytracing
+  unsigned int update_area_center = floor(max_raytrace_range_ / resolution_) + padding_size;
+  unsigned int updated_area_width = floor(max_raytrace_range_ / resolution_) * 2 + 1 + 2 * padding_size;
+  unsigned int max_updated_area_size = pow(updated_area_width, 2); // | padding | raytrace | center | raytrace | padding
+
+  boost::shared_ptr<uint32_t[]> padded_voxel_grid_mask(new uint32_t[max_updated_area_size]);
+  uint32_t empty_mask = (uint32_t)0;
+
+  for (int i = 0; i < max_updated_area_size; ++i)
+    padded_voxel_grid_mask[i] = empty_mask;
+
+  boost::shared_ptr<bool[]> updatedColumns(new bool[max_updated_area_size]);
+
+  for (int i = 0; i < max_updated_area_size; ++i)
+    updatedColumns[i] = false;
+
   //we can pre-compute the enpoints of the map outside of the inner loop... we'll need these later
   double map_end_x = origin_x_ + getSizeInMetersX();
   double map_end_y = origin_y_ + getSizeInMetersY();
@@ -258,64 +271,62 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     double wpy = clearing_observation.cloud_->points[i].y;
     double wpz = clearing_observation.cloud_->points[i].z;
 
-    double distance = dist(ox, oy, oz, wpx, wpy, wpz);
-    double scaling_fact = 1.0;
-    scaling_fact = std::max(std::min(scaling_fact, (distance - 2 * resolution_) / distance), 0.0);
-    wpx = scaling_fact * (wpx - ox) + ox;
-    wpy = scaling_fact * (wpy - oy) + oy;
-    wpz = scaling_fact * (wpz - oz) + oz;
-
-    double a = wpx - ox;
-    double b = wpy - oy;
-    double c = wpz - oz;
-    double t = 1.0;
+    double dx = wpx - ox;
+    double dy = wpy - oy;
+    double dz = wpz - oz;
+    double scaling = 1.0;
 
     //we can only raytrace to a maximum z height
     if (wpz > max_obstacle_height_)
     {
       //we know we want the vector's z value to be max_z
-      t = std::max(0.0, std::min(t, (max_obstacle_height_ - 0.01 - oz) / c));
+      scaling = std::max(0.0, std::min(scaling, (max_obstacle_height_ - oz) / dz));
     }
     //and we can only raytrace down to the floor
     else if (wpz < origin_z_)
     {
       //we know we want the vector's z value to be 0.0
-      t = std::min(t, (origin_z_ - oz) / c);
+      scaling = std::min(scaling, (origin_z_ - oz) / dz);
     }
 
     //the minimum value to raytrace from is the origin
     if (wpx < origin_x_)
     {
-      t = std::min(t, (origin_x_ - ox) / a);
+      scaling = std::min(scaling, (origin_x_ - ox) / dx);
     }
     if (wpy < origin_y_)
     {
-      t = std::min(t, (origin_y_ - oy) / b);
+      scaling = std::min(scaling, (origin_y_ - oy) / dy);
     }
 
     //the maximum value to raytrace to is the end of the map
     if (wpx > map_end_x)
     {
-      t = std::min(t, (map_end_x - ox) / a);
+      scaling = std::min(scaling, (map_end_x - ox) / dx);
     }
     if (wpy > map_end_y)
     {
-      t = std::min(t, (map_end_y - oy) / b);
+      scaling = std::min(scaling, (map_end_y - oy) / dy);
     }
 
-    wpx = ox + a * t;
-    wpy = oy + b * t;
-    wpz = oz + c * t;
+    if (dx * dx + dy * dy + dz * dz > clearing_observation.raytrace_range_ * clearing_observation.raytrace_range_)
+    {
+      scaling = std::min(scaling, clearing_observation.raytrace_range_ / sqrt(dx * dx + dy * dy + dz * dz));
+    }
+
+    wpx = ox + dx * scaling;
+    wpy = oy + dy * scaling;
+    wpz = oz + dz * scaling;
 
     double point_x, point_y, point_z;
     if (worldToMap3DFloat(wpx, wpy, wpz, point_x, point_y, point_z))
     {
       unsigned int cell_raytrace_range = cellDistance(clearing_observation.raytrace_range_);
 
-      //voxel_grid_.markVoxelLine(sensor_x, sensor_y, sensor_z, point_x, point_y, point_z);
-      voxel_grid_.clearVoxelLineInMap(sensor_x, sensor_y, sensor_z, point_x, point_y, point_z, costmap_,
-                                      unknown_threshold_, mark_threshold_, FREE_SPACE, NO_INFORMATION,
-                                      cell_raytrace_range);
+      voxel_grid_.updateClearingMask(padded_voxel_grid_mask, updatedColumns, updated_area_width, update_area_center,
+                                     update_area_center, sensor_z, update_area_center + point_x - (int)sensor_x,
+                                     update_area_center + point_y - (int)sensor_y, point_z, cell_raytrace_range,
+                                     raytrace_corner_cases_, padded_raytracing_);
 
       updateRaytraceBounds(ox, oy, wpx, wpy, clearing_observation.raytrace_range_, min_x, min_y, max_x, max_y);
 
@@ -329,6 +340,9 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
       }
     }
   }
+
+  voxel_grid_.updateGrid(padded_voxel_grid_mask, updated_area_width, (int)sensor_x - update_area_center, (int)sensor_y - update_area_center);
+  voxel_grid_.updateCostmap(costmap_, updatedColumns, updated_area_width, (int)sensor_x - update_area_center, (int)sensor_y - update_area_center, unknown_threshold_, mark_threshold_, FREE_SPACE, NO_INFORMATION);
 
   if( publish_clearing_points )
   {

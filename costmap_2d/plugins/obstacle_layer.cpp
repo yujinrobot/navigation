@@ -38,6 +38,8 @@ void ObstacleLayer::onInitialize()
   nh.param("observation_sources", topics_string, std::string(""));
   ROS_INFO("    Subscribed to Topics: %s", topics_string.c_str());
 
+  max_raytrace_range_ = 0.0;
+
   //now we need to split the topics based on whitespace which we can use a stringstream for
   std::stringstream ss(topics_string);
 
@@ -83,6 +85,9 @@ void ObstacleLayer::onInitialize()
     {
       source_node.getParam(raytrace_range_param_name, raytrace_range);
     }
+
+    if(raytrace_range > max_raytrace_range_)
+      max_raytrace_range_ = raytrace_range;
 
     ROS_DEBUG("Creating an observation buffer for source %s, topic %s, frame %s", source.c_str(), topic.c_str(),
               sensor_frame.c_str());
