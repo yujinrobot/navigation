@@ -45,11 +45,14 @@ class MapGenerator
 
 public:
   MapGenerator(const std::string& mapname) :
-      mapname_(mapname), saved_map_(false)
+      mapname_(mapname), saved_map_(false), track_unknown_space_(false)
   {
-    ros::NodeHandle n;
+    ros::NodeHandle nh, nh_priv("~");
+
+    nh.param("track_unknown_space", track_unknown_space_, track_unknown_space_);
+
     ROS_INFO("Waiting for the map");
-    map_sub_ = n.subscribe("map", 1, &MapGenerator::mapCallback, this);
+    map_sub_ = nh.subscribe("map", 1, &MapGenerator::mapCallback, this);
   }
 
   void mapCallback(const nav_msgs::OccupancyGridConstPtr& map)
@@ -67,22 +70,27 @@ public:
 
     fprintf(out, "P5\n# CREATOR: Map_generator.cpp %.3f m/pix\n%d %d\n255\n", map->info.resolution, map->info.width,
             map->info.height);
-    for (unsigned int y = 0; y < map->info.height; y++)
+
+    for(unsigned int y = 0; y < map->info.height; y++)
     {
-      for (unsigned int x = 0; x < map->info.width; x++)
+      for(unsigned int x = 0; x < map->info.width; x++)
       {
         unsigned int i = x + (map->info.height - y - 1) * map->info.width;
-        if (map->data[i] == 0)
-        { //occ [0,0.1)
-          fputc(254, out);
+        if ((map->data[i] == -1) && track_unknown_space_) // unknown
+        {
+          fputc(205, out); // light grey
         }
-        else if (map->data[i] == +100)
-        { //occ (0.65,1]
-          fputc(000, out);
+        else if ((map->data[i] == 0)) // free
+        {
+          fputc(255, out); // white
         }
-        else
-        { //occ [0.1,0.65]
-          fputc(205, out);
+        else if ((map->data[i] == 100)) // occupied
+        {
+          fputc(0, out); // black
+        }
+        else // probabilities in between, e.g. obstacle inflation, are consider free
+        {
+          fputc(255, out);
         }
       }
     }
@@ -92,16 +100,6 @@ public:
     std::string mapmetadatafile = mapname_ + ".yaml";
     ROS_INFO("Writing map occupancy data to %s", mapmetadatafile.c_str());
     FILE* yaml = fopen(mapmetadatafile.c_str(), "w");
-
-    /*
-     resolution: 0.100000
-     origin: [0.000000, 0.000000, 0.000000]
-     #
-     negate: 0
-     occupied_thresh: 0.65
-     free_thresh: 0.196
-
-     */
 
     geometry_msgs::Quaternion orientation = map->info.origin.orientation;
     tf::Matrix3x3 mat(tf::Quaternion(orientation.x, orientation.y, orientation.z, orientation.w));
@@ -121,7 +119,7 @@ public:
   std::string mapname_;
   ros::Subscriber map_sub_;
   bool saved_map_;
-
+  bool track_unknown_space_;
 };
 
 #define USAGE "Usage: \n" \

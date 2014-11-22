@@ -119,7 +119,10 @@ namespace dwa_local_planner {
       path_costs_(planner_util->getCostmap()),
       goal_costs_(planner_util->getCostmap(), 0.0, 0.0, true),
       goal_front_costs_(planner_util->getCostmap(), 0.0, 0.0, true),
-      alignment_costs_(planner_util->getCostmap())
+      alignment_costs_(planner_util->getCostmap()),
+      obstacle_slow_down_(false),
+      slow_down_min_footprint_cost_(0.0),
+      slow_down_max_footprint_cost_(0.0)
   {
     ros::NodeHandle private_nh("~/" + name);
 
@@ -150,7 +153,6 @@ namespace dwa_local_planner {
     private_nh.param("sum_scores", sum_scores, false);
     obstacle_costs_.setSumScores(sum_scores);
 
-
     private_nh.param("publish_cost_grid_pc", publish_cost_grid_pc_, false);
     map_viz_.initialize(name, planner_util->getGlobalFrame(), boost::bind(&DWAPlanner::getCellCosts, this, _1, _2, _3, _4, _5, _6));
 
@@ -179,6 +181,10 @@ namespace dwa_local_planner {
     scored_sampling_planner_ = base_local_planner::SimpleScoredSamplingPlanner(generator_list, critics);
 
     private_nh.param("cheat_factor", cheat_factor_, 1.0);
+
+    private_nh.param("obstacle_slow_down", obstacle_slow_down_, false);
+    private_nh.param("slow_down_min_footprint_cost", slow_down_min_footprint_cost_, 0.0);
+    private_nh.param("slow_down_max_footprint_cost", slow_down_max_footprint_cost_, 0.0);
   }
 
   // used for visualization only, total_costs are not really total costs
@@ -305,6 +311,35 @@ namespace dwa_local_planner {
     geometry_msgs::PoseStamped goal_pose = global_plan_.back();
     Eigen::Vector3f goal(goal_pose.pose.position.x, goal_pose.pose.position.y, tf::getYaw(goal_pose.pose.orientation));
     base_local_planner::LocalPlannerLimits limits = planner_util_->getCurrentLimits();
+
+    if (obstacle_slow_down_)
+    {
+      // adjust limits, if robot is close to obstacles
+      double fp_cost = obstacle_costs_.footprintCost(global_pose.getOrigin().getX(),
+                                                     global_pose.getOrigin().getY(),
+                                                     tf::getYaw(global_pose.getRotation()),
+                                                    0.0);
+      // scaling the max. limits from max. limit at slow_down_min_footprint_cost_
+      // to min. limit at slow_down_max_footprint_cost_
+      double min_fpc = slow_down_min_footprint_cost_;
+      double max_fpc = slow_down_max_footprint_cost_;
+      if(fp_cost > min_fpc)
+      {
+        ROS_DEBUG_STREAM("Slowing the robot down (footprint cost: " << fp_cost << ")");
+        limits.max_vel_x = std::max((((limits.max_vel_x - limits.min_vel_x) / (min_fpc - max_fpc))
+                           * (fp_cost - min_fpc) + limits.max_vel_x), limits.min_vel_x);
+        limits.max_vel_y = std::max((((limits.max_vel_y - limits.min_vel_y) / (min_fpc - max_fpc))
+                           * (fp_cost - min_fpc) + limits.max_vel_y), limits.min_vel_y);
+        limits.max_trans_vel = std::max((((limits.max_trans_vel - limits.min_trans_vel) / (min_fpc - max_fpc))
+                               * (fp_cost - min_fpc) + limits.max_trans_vel), limits.min_trans_vel);
+        limits.max_rot_vel = std::max((((limits.max_rot_vel - limits.min_rot_vel) / (min_fpc - max_fpc))
+                             * (fp_cost - min_fpc) + limits.max_rot_vel), limits.min_rot_vel);
+        ROS_DEBUG_STREAM("New limits: max_vel_x = " << limits.max_vel_x
+                         << ", max_vel_y = " << limits.max_vel_y
+                         << ", max_trans_vel = " << limits.max_trans_vel
+                         << ", max_rot_vel = " << limits.max_rot_vel);
+      }
+    }
 
     // prepare cost functions and generators for this run
     generator_.initialise(pos,
