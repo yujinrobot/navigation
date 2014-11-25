@@ -344,6 +344,8 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
   voxel_grid_.updateGrid(padded_voxel_grid_mask, updated_area_width, (int)sensor_x - update_area_center, (int)sensor_y - update_area_center);
   voxel_grid_.updateCostmap(costmap_, updatedColumns, updated_area_width, (int)sensor_x - update_area_center, (int)sensor_y - update_area_center, unknown_threshold_, mark_threshold_, FREE_SPACE, NO_INFORMATION);
 
+  setUpdatedCells(updatedColumns, updated_area_width, (int)sensor_x - update_area_center, (int)sensor_y - update_area_center);
+
   if( publish_clearing_points )
   {
     clearing_endpoints_.header.frame_id = global_frame_;
@@ -351,6 +353,43 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     clearing_endpoints_.header.seq = clearing_observation.cloud_->header.seq;
 
     clearing_endpoints_pub_.publish( clearing_endpoints_ );
+  }
+}
+
+void VoxelLayer::setUpdatedCells(boost::shared_ptr<bool[]> updated_columns, unsigned int updated_area_width, unsigned int offset_x, unsigned int offset_y)
+{
+  updated_cells_index_.clear();
+
+  unsigned int linear_index = 0;
+  unsigned int linear_index_offseted = 0;
+  int y = 0;
+
+  for (unsigned int row_index = 0; row_index < updated_area_width; ++row_index)
+  {
+    linear_index = row_index * updated_area_width;
+    y = row_index + offset_y;
+    if (y < 0)
+      continue;
+    if (y > size_y_)
+      break;
+    linear_index_offseted = y * size_x_ + offset_x;
+    for (unsigned int column_index = 0; column_index < updated_area_width; ++column_index)
+    {
+      if (!updated_columns[linear_index])
+      {
+        linear_index++;
+        linear_index_offseted++;
+        continue;
+      }
+
+      MapLocation cell_location;
+      cell_location.x = column_index + offset_x;
+      cell_location.y = y;
+      updated_cells_index_.push_back(cell_location);
+
+      linear_index_offseted++;
+      linear_index++;
+    }
   }
 }
 
