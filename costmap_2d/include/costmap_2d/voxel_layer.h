@@ -84,6 +84,10 @@ public:
 protected:
   virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
 
+  std::list<MapLocation> updated_cells_index_;
+
+  virtual void updateUpdateCells(boost::shared_ptr<bool[]> updated_columns, unsigned int updated_area_width, unsigned int offset_x, unsigned int offset_y);
+
 private:
   void reconfigureCB(costmap_2d::VoxelPluginConfig &config, uint32_t level);
   void clearNonLethal(double wx, double wy, double w_size_x, double w_size_y, bool clear_no_info);
