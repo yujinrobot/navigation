@@ -113,6 +113,14 @@ double ObstacleCostFunction::getScalingFactor(Trajectory &traj, double scaling_s
   return scale;
 }
 
+double ObstacleCostFunction::footprintCost (const double& x,
+                                            const double& y,
+                                            const double& th,
+                                            double scale)
+{
+  return footprintCost(x, y, th, scale, footprint_spec_, costmap_, world_model_);
+}
+
 double ObstacleCostFunction::footprintCost (
     const double& x,
     const double& y,
