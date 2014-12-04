@@ -177,6 +177,13 @@ namespace dwa_local_planner {
       base_local_planner::MapGridCostFunction alignment_costs_;
 
       base_local_planner::SimpleScoredSamplingPlanner scored_sampling_planner_;
+
+      /// slow the robot down, when close to obstacles
+      bool obstacle_slow_down_;
+      /// footprint cost at which the robot is being slowed do
+      double slow_down_min_footprint_cost_;
+      /// footprint cost at which maximal velocity reduction is applied (max. limits == min. limits)
+      double slow_down_max_footprint_cost_;
   };
 };
 #endif

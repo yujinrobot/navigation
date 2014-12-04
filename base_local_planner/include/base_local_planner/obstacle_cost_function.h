@@ -66,7 +66,14 @@ public:
 
   // helper functions, made static for easy unit testing
   static double getScalingFactor(Trajectory &traj, double scaling_speed, double max_trans_vel, double max_scaling_factor);
-  static double footprintCost(
+
+  double footprintCost(
+      const double& x,
+      const double& y,
+      const double& th,
+      double scale);
+
+  double footprintCost(
       const double& x,
       const double& y,
       const double& th,
