@@ -116,6 +116,11 @@ private:
    */
   bool padded_raytracing_;
 
+  /**
+   * @brief Uses an more accurate implementation of the integer Bresenham algorithm which needs a bit more computation power
+   */
+  bool use_accurate_bresenham_;
+
   bool publish_voxel_;
   ros::Publisher voxel_pub_;
   voxel_grid::VoxelGrid voxel_grid_;

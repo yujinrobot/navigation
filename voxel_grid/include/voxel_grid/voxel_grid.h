@@ -217,6 +217,10 @@ namespace voxel_grid {
       void updateClearingMask(boost::shared_ptr<uint32_t[]>& grid_mask, boost::shared_ptr<bool[]>& updated_columns, unsigned int updated_area_width, double x0, double y0, double z0, double x1, double y1,
                               double z1, unsigned int max_length = UINT_MAX, bool raytrace_corner_cases = false, bool padded_raytracing = false);
 
+      void updateClearingMaskNew(boost::shared_ptr<uint32_t[]>& grid_mask, boost::shared_ptr<bool[]>& updated_columns,
+                                 unsigned int updated_area_width, double x0, double y0, double z0, double x1, double y1,
+                                 double z1, unsigned int max_length = UINT_MAX);
+
       VoxelStatus getVoxel(unsigned int x, unsigned int y, unsigned int z);
       VoxelStatus getVoxelColumn(unsigned int x, unsigned int y,
           unsigned int unknown_threshold = 0, unsigned int marked_threshold = 0); //Are there any obstacles at that (x, y) location in the grid?
@@ -362,6 +366,54 @@ namespace voxel_grid {
 
                 error_c -= abs_da;
               }
+          }
+          at(offset, z_mask);
+      }
+
+      template <class ActionType, class OffA, class OffB, class OffC>
+        inline void bresenham3Dnew(ActionType at, OffA off_a, OffB off_b, OffC off_c,
+            unsigned int abs_da, unsigned int abs_db, unsigned int abs_dc,
+            int error_b, int error_c, int offset_a, int offset_b, int offset_c, unsigned int &offset,
+            unsigned int &z_mask, unsigned int length, unsigned int max_length = UINT_MAX)
+      {
+          unsigned int end = std::min(max_length, length);
+
+          for(unsigned int i = 0; i < end; ++i)
+          {
+              at(offset, z_mask);
+              off_a(offset_a);
+
+
+              if(error_b >= 0)
+              {
+                //adjusted not original Bresenham
+                at(offset, z_mask);     //set voxel on the same line
+
+                off_b(offset_b);        //go one line up
+                off_a(-offset_a);       //go one column back
+                at(offset, z_mask);     //set voxel
+
+                off_a(offset_a);        //go back to next column
+
+                error_b -= abs_da;
+              }
+
+              if(error_c >= 0)
+              {
+                //adjusted not original Bresenham
+                at(offset, z_mask);     //set voxel on the same line
+
+                off_c(offset_c);        //go one line up
+                off_a(-offset_a);       //go one column back
+                at(offset, z_mask);     //set voxel
+
+                off_a(offset_a);        //go back to next column
+
+                error_c -= abs_da;
+              }
+
+              error_b += abs_db;
+              error_c += abs_dc;
           }
           at(offset, z_mask);
       }
