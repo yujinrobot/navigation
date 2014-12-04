@@ -29,6 +29,7 @@ void VoxelLayer::onInitialize()
 
   private_nh.param("raytrace_corner_cases", raytrace_corner_cases_, false);
   private_nh.param("padded_raytracing", padded_raytracing_, false);
+  private_nh.param("use_accurate_bresenham", use_accurate_bresenham_, false);
 }
 
 void VoxelLayer::setupDynamicReconfigure(ros::NodeHandle& nh)
@@ -327,6 +328,13 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
                                      update_area_center, sensor_z, update_area_center + point_x - (int)sensor_x,
                                      update_area_center + point_y - (int)sensor_y, point_z, cell_raytrace_range,
                                      raytrace_corner_cases_, padded_raytracing_);
+
+      if (use_accurate_bresenham_)
+      {
+        voxel_grid_.updateClearingMaskNew(padded_voxel_grid_mask, updatedColumns, updated_area_width, update_area_center,
+                                       update_area_center, sensor_z, update_area_center + point_x - (int)sensor_x,
+                                       update_area_center + point_y - (int)sensor_y, point_z, cell_raytrace_range);
+      }
 
       updateRaytraceBounds(ox, oy, wpx, wpy, clearing_observation.raytrace_range_, min_x, min_y, max_x, max_y);
 

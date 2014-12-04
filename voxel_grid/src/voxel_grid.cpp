@@ -271,6 +271,72 @@ namespace voxel_grid {
     return;
   }
 
+  void VoxelGrid::updateClearingMaskNew(boost::shared_ptr<uint32_t[]>& grid_mask,
+                                        boost::shared_ptr<bool[]>& updated_columns, unsigned int updated_area_width,
+                                        double x0, double y0, double z0, double x1, double y1, double z1,
+                                        unsigned int max_length)
+  {
+    double scaling_amount = 32; //more is more accurate but lower max value (as we have limit of MAX_INT)
+
+    double dx = int(scaling_amount * (x1 - x0));
+    double dy = int(scaling_amount * (y1 - y0));
+    double dz = int(scaling_amount * (z1 - z0));
+
+    double abs_dx = abs(dx);
+    double abs_dy = abs(dy);
+    double abs_dz = abs(dz);
+
+    int offset_dx = sign(dx);
+    int offset_dy = sign(dy) * size_x_;
+    int offset_dz = sign(dz);
+
+    unsigned int z_mask = ((1 << 16) | 1) << (unsigned int)z0;
+    unsigned int offset = (unsigned int)y0 * size_x_ + (unsigned int)x0;
+
+    GridOffset index_updater_xy(offset);
+    ZOffset index_updater_z(z_mask);
+
+    int x0_int = int(x0);
+    int y0_int = int(y0);
+    int z0_int = int(z0);
+
+    double x_lost_rounding = dx > 0 ? 1.0 - abs(x0 - x0_int) : abs(x0 - x0_int);
+    double y_lost_rounding = dy > 0 ? 1.0 - abs(y0 - y0_int) : abs(y0 - y0_int);
+    double z_lost_rounding = dz > 0 ? 1.0 - abs(z0 - z0_int) : abs(z0 - z0_int);
+
+    double dist = sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1) + (z0 - z1) * (z0 - z1));
+    double scale = std::min(1.0, max_length / dist);
+
+    if (abs_dx >= max(abs_dy, abs_dz))
+    {
+      int error_y = int(abs_dy * x_lost_rounding - abs_dx * y_lost_rounding);
+      int error_z = int(abs_dz * x_lost_rounding - abs_dx * z_lost_rounding);
+
+      bresenham3Dnew(GridMaskUpdater(grid_mask, updated_columns), index_updater_xy, index_updater_xy, index_updater_z,
+                     abs_dx, abs_dy, abs_dz, error_y, error_z, offset_dx, offset_dy, offset_dz, offset, z_mask,
+                     abs(int(x0) - int(x1)), (unsigned int)(scale * abs_dy));
+      return;
+    }
+
+    if (abs_dy >= abs_dz)
+    {
+      int error_x = int(abs_dx * y_lost_rounding - abs_dy * x_lost_rounding);
+      int error_z = int(abs_dz * y_lost_rounding - abs_dy * z_lost_rounding);
+
+      bresenham3Dnew(GridMaskUpdater(grid_mask, updated_columns), index_updater_xy, index_updater_xy, index_updater_z,
+                     abs_dy, abs_dx, abs_dz, error_x, error_z, offset_dy, offset_dx, offset_dz, offset, z_mask,
+                     abs(int(y0) - int(y1)), (unsigned int)(scale * abs_dy));
+      return;
+    }
+
+    int error_x = int(abs_dx * z_lost_rounding - abs_dz * x_lost_rounding);
+    int error_y = int(abs_dy * z_lost_rounding - abs_dz * y_lost_rounding);
+
+    bresenham3Dnew(GridMaskUpdater(grid_mask, updated_columns), index_updater_z, index_updater_xy, index_updater_xy,
+                   abs_dz, abs_dx, abs_dy, error_x, error_y, offset_dz, offset_dx, offset_dy, offset, z_mask,
+                   abs(int(z0) - int(z1)), (unsigned int)(scale * abs_dy));
+  }
+
   void VoxelGrid::updateGrid(boost::shared_ptr<uint32_t[]>& grid_mask, unsigned int updated_area_width, int offset_x, int offset_y)
   {
     uint32_t mask;
