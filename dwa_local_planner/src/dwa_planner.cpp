@@ -325,7 +325,7 @@ namespace dwa_local_planner {
       double max_fpc = slow_down_max_footprint_cost_;
       if(fp_cost > min_fpc)
       {
-        ROS_ERROR_STREAM("Slowing the robot down (footprint cost: " << fp_cost << ")");
+        ROS_DEBUG_STREAM("Slowing the robot down (footprint cost: " << fp_cost << ")");
         limits.max_vel_x = std::max((((limits.max_vel_x - limits.min_vel_x) / (min_fpc - max_fpc))
                            * (fp_cost - min_fpc) + limits.max_vel_x), limits.min_vel_x);
         limits.max_vel_y = std::max((((limits.max_vel_y - limits.min_vel_y) / (min_fpc - max_fpc))
@@ -334,7 +334,7 @@ namespace dwa_local_planner {
                                * (fp_cost - min_fpc) + limits.max_trans_vel), limits.min_trans_vel);
         limits.max_rot_vel = std::max((((limits.max_rot_vel - limits.min_rot_vel) / (min_fpc - max_fpc))
                              * (fp_cost - min_fpc) + limits.max_rot_vel), limits.min_rot_vel);
-        ROS_ERROR_STREAM("New limits: max_vel_x = " << limits.max_vel_x
+        ROS_DEBUG_STREAM("New limits: max_vel_x = " << limits.max_vel_x
                          << ", max_vel_y = " << limits.max_vel_y
                          << ", max_trans_vel = " << limits.max_trans_vel
                          << ", max_rot_vel = " << limits.max_rot_vel);
