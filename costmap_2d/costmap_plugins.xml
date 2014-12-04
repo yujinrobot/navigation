@@ -15,6 +15,9 @@
     <class type="costmap_2d::VoxelLayer"     base_class_type="costmap_2d::Layer">
       <description>Similar to obstacle costmap, but uses 3D voxel grid to store data.</description>
     </class>
+    <class type="costmap_2d::ExtendedVoxelLayer"     base_class_type="costmap_2d::Layer">
+      <description>Same as VoxelLayer but has the option to update only the detected area instead of bounding box. Also publishes which cells get cleared.</description>
+    </class>
     <class type="costmap_2d::VoxelWithFootprintLayer" base_class_type="costmap_2d::Layer">
       <description>
         Combines voxel and footprint plugins, so footprint-clearing is

@@ -1,0 +1,9 @@
+<library path="lib/libhonk_wait_recovery">
+  <class name="honk_wait_recovery/HonkWaitRecovery"
+         type="honk_wait_recovery::HonkWaitRecovery"
+         base_class_type="nav_core::RecoveryBehavior">
+    <description>
+      A recovery behaviour that triggers a sound (if supported) and waits for a specified time
+    </description>
+  </class>
+</library>

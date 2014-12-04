@@ -1,0 +1,9 @@
+<library path="lib/libclear_rotate_recovery">
+  <class name="clear_rotate_recovery/ClearRotateRecovery"
+         type="clear_rotate_recovery::ClearRotateRecovery"
+         base_class_type="nav_core::RecoveryBehavior">
+    <description>
+      A recovery behaviour that clears the costmap and then rotates the robot
+    </description>
+  </class>
+</library>
