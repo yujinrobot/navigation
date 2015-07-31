@@ -126,11 +126,11 @@ namespace voxel_grid {
     raytraceLine(&plain_clearer, x0, y0, z0, x1, y1, z1, size_x_, max_length, false);
   }
 
-  void VoxelGrid::clearVoxelLineInMap(double x0, double y0, double z0, double x1, double y1, double z1,
+  void VoxelGrid::clearVoxelLineInMap(double x0, double y0, double z0, double dx, double dy, double dz,
                                       unsigned char *map_2d, AbstractGridUpdater* clearer,
-                                      unsigned int area_width, unsigned int max_length, bool include_corner_cases)
+                                      unsigned int area_width, int xyz, int number_of_steps, bool include_corner_cases)
   {
-    raytraceLine(clearer, x0, y0, z0, x1, y1, z1, area_width, max_length, include_corner_cases);
+    raytraceLine(clearer, x0, y0, z0, dx, dy, dz, area_width, xyz, number_of_steps, include_corner_cases);
   }
 
   VoxelStatus VoxelGrid::getVoxel(unsigned int x, unsigned int y, unsigned int z)
