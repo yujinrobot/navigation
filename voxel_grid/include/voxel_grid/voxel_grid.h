@@ -229,9 +229,9 @@ public:
 
   void markVoxelLine(double x0, double y0, double z0, double x1, double y1, double z1, unsigned int max_length = UINT_MAX);
   void clearVoxelLine(double x0, double y0, double z0, double x1, double y1, double z1, unsigned int max_length = UINT_MAX);
-  void clearVoxelLineInMap(double x0, double y0, double z0, double x1, double y1, double z1, unsigned char *map_2d,
-                           AbstractGridUpdater* clearer, unsigned int area_width,
-                           unsigned int max_length = UINT_MAX, bool include_corner_cases = false);
+  void clearVoxelLineInMap(double x0, double y0, double z0, double dx, double dy, double dz, unsigned char *map_2d,
+                           AbstractGridUpdater* clearer, unsigned int area_width, int xyz,
+                           int number_of_steps, bool include_corner_cases = false);
 
   VoxelStatus getVoxel(unsigned int x, unsigned int y, unsigned int z);
 
@@ -245,7 +245,6 @@ public:
   unsigned int sizeY();
   unsigned int sizeZ();
 
-
   /**
    * @brief Raytrace a line with the integer Bresenham algorithm
    *
@@ -253,12 +252,9 @@ public:
    * http://graphics.idav.ucdavis.edu/education/GraphicsNotes/CAGDNotes/Bresenhams-Algorithm.pdf
    *
   **/
-  inline void raytraceLine(AbstractGridUpdater* clearer, double x0, double y0, double z0, double x1,
-                           double y1, double z1, unsigned int width, unsigned int max_length = UINT_MAX, bool include_corner_cases = false)
+  inline void raytraceLine(AbstractGridUpdater* clearer, double x0, double y0, double z0, double dx,
+                           double dy, double dz, unsigned int width, int xyz, int number_of_steps, bool include_corner_cases = false)
   {
-    double dx = x1 - x0;
-    double dy = y1 - y0;
-    double dz = z1 - z0;
 
     double abs_dx = fabs(accuracy_multiplier_ * dx);
     double abs_dy = fabs(accuracy_multiplier_ * dy);
@@ -288,14 +284,10 @@ public:
     double y_lost_rounding = dy > 0 ? 1.0 - fabs(modf(y0, &temp)) : fabs(modf(y0, &temp));
     double z_lost_rounding = dz > 0 ? 1.0 - fabs(modf(z0, &temp)) : fabs(modf(z0, &temp));
 
-    double dist = sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1) + (z0 - z1) * (z0 - z1));
-    double scale = std::min(1.0, max_length / dist);
-
-    if (abs_dx >= max(abs_dy, abs_dz))
+    if (xyz == 0)
     {
       int error_y = (int)(abs_dy * x_lost_rounding - abs_dx * y_lost_rounding);
       int error_z = (int)(abs_dz * x_lost_rounding - abs_dx * z_lost_rounding);
-      unsigned int number_of_steps = scale * abs(int(x0) - int(x1));
 
       if (include_corner_cases)
       {
@@ -310,11 +302,10 @@ public:
       return;
     }
 
-    if (abs_dy >= abs_dz)
+    if (xyz == 1)
     {
       int error_x = (int)(abs_dx * y_lost_rounding - abs_dy * x_lost_rounding);
       int error_z = (int)(abs_dz * y_lost_rounding - abs_dy * z_lost_rounding);
-      unsigned int number_of_steps = scale * abs(int(y0) - int(y1));
 
       if (include_corner_cases)
       {
@@ -331,7 +322,6 @@ public:
 
     int error_x = (int)(abs_dx * z_lost_rounding - abs_dz * x_lost_rounding);
     int error_y = (int)(abs_dy * z_lost_rounding - abs_dz * y_lost_rounding);
-    unsigned int number_of_steps = scale * abs(int(z0) - int(z1));
 
     if (include_corner_cases)
     {
@@ -395,7 +385,6 @@ private:
                                           unsigned int &offset, unsigned int &z_mask,
                                           unsigned int number_of_steps)
   {
-
     //-1 because we don't want to clear the corners _after_ the last cell
     //last cell is cleared after the loop
     for (unsigned int i = 0; i < number_of_steps - 1; ++i)
@@ -436,12 +425,12 @@ private:
     }
 
     //clearing of last cell because loop only goes to number_of_steps - 1
-    off_a(offset_a);
+    (*clearer)(offset, z_mask);
   }
 
-  inline int sign(int i)
+  inline int sign(double i)
   {
-    return i >= 0 ? 1 : -1;
+    return i >= 0.0 ? 1 : -1;
   }
 
   inline unsigned int max(unsigned int x, unsigned int y)
