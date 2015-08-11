@@ -104,12 +104,13 @@ target_link_libraries(costmap_2d
 )
 
 add_library(layers
-  plugins/extended_voxel_layer.cpp
   plugins/footprint_layer.cpp
   plugins/inflation_layer.cpp
   plugins/obstacle_layer.cpp
+  plugins/extended_obstacle_layer.cpp
   plugins/static_layer.cpp
   plugins/voxel_layer.cpp
+  plugins/extended_voxel_layer.cpp
   src/observation_buffer.cpp
 )
 target_link_libraries(layers

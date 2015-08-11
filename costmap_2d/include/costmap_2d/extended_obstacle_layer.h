@@ -1,5 +1,5 @@
-#ifndef COSTMAP_2D_EXTENDED_VOXEL_LAYER_H_
-#define COSTMAP_2D_EXTENDED_VOXEL_LAYER_H_
+#ifndef COSTMAP_2D_EXTENDED_OBSTACLE_LAYER_H_
+#define COSTMAP_2D_EXTENDED_OBSTACLE_LAYER_H_
 
 #include <costmap_2d/voxel_layer.h>
 #include <nav_msgs/GridCells.h>
@@ -7,7 +7,7 @@
 namespace costmap_2d
 {
 
-class ExtendedVoxelLayer : public VoxelLayer
+class ExtendedObstacleLayer : public ObstacleLayer
 {
 public:
   virtual void onInitialize();
@@ -19,15 +19,10 @@ public:
   virtual void updateMap(const nav_msgs::GridCells::Ptr& update_cells);
 
 protected:
-  virtual void publishClearing();
-
-  bool reset_voxels_every_cycle_;
-
   boost::shared_ptr<Costmap2D> linked_layer_;
-  ros::Publisher update_publisher_;
   ros::Subscriber update_subscriber_;
 };
 
 } //end of namespace costmap_2d
 
-#endif /* DIFFERENTIAL_UPDATE_H_ */
+#endif /* COSTMAP_2D_EXTENDED_OBSTACLE_LAYER_H_ */

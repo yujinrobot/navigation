@@ -137,6 +137,11 @@ void VoxelLayer::resetMaps()
   voxel_grid_.reset();
 }
 
+void VoxelLayer::resetGrid()
+{
+  voxel_grid_.reset();
+}
+
 void VoxelLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
                               double* max_x, double* max_y)
 {
@@ -295,10 +300,19 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
 
   if (!worldToMap3DFloat(ox, oy, oz, sensor_x, sensor_y, sensor_z))
   {
-    ROS_WARN_THROTTLE(
+    ROS_ERROR_THROTTLE(
         1.0,
-        "The origin for the sensor at (%.2f, %.2f, %.2f) is out of map bounds. So, the costmap cannot raytrace for it.",
-        ox, oy, oz);
+        "The origin for the sensor at (%.2f, %.2f, %.2f) in voxel layer of %s is out of map bounds. So, the costmap cannot raytrace for it.",
+        ox, oy, oz, name_.c_str());
+
+    double mx = ((ox - origin_x_) / resolution_);
+    double my = ((oy - origin_y_) / resolution_);
+    double mz = ((oz - origin_z_) / z_resolution_);
+
+    ROS_WARN_STREAM("Calculated costmap position of sensor: " << mx << ", " << my << ", " << mz);
+    ROS_WARN_STREAM("Map origin: " << origin_x_ << ", " << origin_y_ << ", " << origin_z_);
+    ROS_WARN_STREAM("Map size: " << size_x_ << ", " << size_y_ << ", " << size_z_);
+
     return;
   }
 

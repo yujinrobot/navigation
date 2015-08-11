@@ -86,6 +86,7 @@ public:
 protected:
   virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
   virtual void resetMaps();
+  virtual void resetGrid();
 
   boost::shared_ptr<std::list<std::pair<unsigned int, unsigned int> > > updated_cells_indices_;
 
