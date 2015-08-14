@@ -32,7 +32,8 @@ void ExtendedVoxelLayer::onInitialize()
   if (update_subscribe_topic != std::string())
   {
 
-    std::string name_space = ros::names::parentNamespace(private_nh.getNamespace()).append("/").append(update_subscribe_topic);
+    std::string name_space = ros::names::parentNamespace(private_nh.getNamespace()).append("/").append(
+        update_subscribe_topic);
     update_subscriber_ = global_nh.subscribe(name_space, 1, &ExtendedVoxelLayer::updateMap, this);
   }
 }
@@ -40,7 +41,7 @@ void ExtendedVoxelLayer::onInitialize()
 void ExtendedVoxelLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
                                       double* max_x, double* max_y)
 {
-  if(reset_voxels_every_cycle_)
+  if (reset_voxels_every_cycle_)
   {
     resetGrid();
   }
@@ -50,7 +51,7 @@ void ExtendedVoxelLayer::updateBounds(double robot_x, double robot_y, double rob
 
 void ExtendedVoxelLayer::updateCosts(Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j)
 {
-  if (!enabled_)
+  if (!enabled_ || !updated_cells_indices_)
     return;
 
   if (update_publisher_)
@@ -58,7 +59,36 @@ void ExtendedVoxelLayer::updateCosts(Costmap2D& master_grid, int min_i, int min_
     publishClearing();
   }
 
-  VoxelLayer::updateCosts(master_grid, min_i, min_j, max_i, max_j);
+  if (combination_method_ <= 1)
+  {
+    //the old way
+    VoxelLayer::updateCosts(master_grid, min_i, min_j, max_i, max_j); //original
+    return;
+  }
+
+  if (combination_method_ == 2)
+  {
+    //still add all obstacles
+    updateWithMax(master_grid, min_i, min_j, max_i, max_j);
+
+    //selective overwriting
+    unsigned char* master_array = master_grid.getCharMap();
+    unsigned int span = master_grid.getSizeInCellsX();
+
+    int x = 0;
+    int y = 0;
+    int master_index = 0;
+
+    for (std::list<std::pair<unsigned int, unsigned int> >::iterator updated_cell_index_it =
+        updated_cells_indices_->begin(); updated_cell_index_it != updated_cells_indices_->end();
+        ++updated_cell_index_it)
+    {
+      x = updated_cell_index_it->first;
+      y = updated_cell_index_it->second;
+
+      master_array[y * span + x] = costmap_[getIndex(x, y)];
+    }
+  }
 }
 
 void ExtendedVoxelLayer::updateMap(const nav_msgs::GridCells::Ptr& update_cells)
@@ -69,10 +99,12 @@ void ExtendedVoxelLayer::updateMap(const nav_msgs::GridCells::Ptr& update_cells)
   unsigned char value = 0;
   std::list<geometry_msgs::Point> points;
 
+//  ROS_INFO_STREAM_THROTTLE(3, "updated cells: " << update_cells->cells.size() << ", name: " << name_);
+
   for (int i = 0; i < update_cells->cells.size(); ++i)
   {
     x = update_cells->cells[i].x;
-    x = update_cells->cells[i].y;
+    y = update_cells->cells[i].y;
 
     costmap_[getIndex(x, y)] = FREE_SPACE;
   }
@@ -80,9 +112,6 @@ void ExtendedVoxelLayer::updateMap(const nav_msgs::GridCells::Ptr& update_cells)
 
 void ExtendedVoxelLayer::publishClearing()
 {
-  if(!updated_cells_indices_)
-    return;
-
   unsigned int x = 0;
   unsigned int y = 0;
 

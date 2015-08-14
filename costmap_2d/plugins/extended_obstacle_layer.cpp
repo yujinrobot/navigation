@@ -49,11 +49,11 @@ void ExtendedObstacleLayer::updateMap(const nav_msgs::GridCells::Ptr& update_cel
   unsigned char value = 0;
   std::list<geometry_msgs::Point> points;
 
-//  ROS_ERROR_STREAM("updateing " << name_ << " with " << update_cells->cells.size());
+//  ROS_INFO_STREAM_THROTTLE(3, "updateing " << name_ << " with " << update_cells->cells.size());
   for (int i = 0; i < update_cells->cells.size(); ++i)
   {
     x = update_cells->cells[i].x;
-    x = update_cells->cells[i].y;
+    y = update_cells->cells[i].y;
 
     costmap_[getIndex(x, y)] = FREE_SPACE;
   }
