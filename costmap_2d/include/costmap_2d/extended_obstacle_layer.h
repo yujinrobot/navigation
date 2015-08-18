@@ -21,6 +21,8 @@ public:
 protected:
   boost::shared_ptr<Costmap2D> linked_layer_;
   ros::Subscriber update_subscriber_;
+
+  bool reset_every_cycle_;
 };
 
 } //end of namespace costmap_2d

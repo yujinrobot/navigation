@@ -93,8 +93,12 @@ protected:
 private:
   void reconfigureCB(costmap_2d::VoxelPluginConfig &config, uint32_t level);
   void clearNonLethal(double wx, double wy, double w_size_x, double w_size_y, bool clear_no_info);
-  virtual void raytraceFreespace(const costmap_2d::Observation& clearing_observation, double* min_x, double* min_y,
-                                 double* max_x, double* max_y);
+  virtual void clear(std::vector<Observation>& observations, double* min_x, double* min_y,
+                     double* max_x, double* max_y);
+  virtual void raytraceFreespace(const costmap_2d::Observation& clearing_observation,
+                                 boost::shared_ptr<voxel_grid::AbstractGridUpdater> voxel_clearer,
+                                 double* min_x, double* min_y, double* max_x, double* max_y,
+                                 unsigned int update_area_center = 0);
   virtual void convertFromMapToWorld(sensor_msgs::PointCloud& point_cloud);
 
   dynamic_reconfigure::Server<costmap_2d::VoxelPluginConfig> *voxel_dsrv_;

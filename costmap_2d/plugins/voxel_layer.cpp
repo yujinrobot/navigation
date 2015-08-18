@@ -164,10 +164,7 @@ void VoxelLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, 
   current_ = current;
 
   // raytrace freespace
-  for (unsigned int i = 0; i < clearing_observations.size(); ++i)
-  {
-    raytraceFreespace(clearing_observations[i], min_x, min_y, max_x, max_y);
-  }
+  clear(clearing_observations,  min_x, min_y, max_x, max_y);
 
   // place the new obstacles into a priority queue... each with a priority of zero to begin with
   for (std::vector<Observation>::const_iterator it = observations.begin(); it != observations.end(); ++it)
@@ -287,8 +284,85 @@ void VoxelLayer::clearNonLethal(double wx, double wy, double w_size_x, double w_
   }
 }
 
-void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, double* min_x, double* min_y, double* max_x,
-                                   double* max_y)
+void VoxelLayer::clear(std::vector<Observation>& observations, double* min_x, double* min_y,
+                       double* max_x, double* max_y)
+{
+  boost::shared_ptr<voxel_grid::AbstractGridUpdater> voxel_clearer;
+  unsigned int update_area_center = 0;
+
+  if (use_cached_updating_)
+  {
+    unsigned int max_raytrace_range_in_cells = std::floor(max_raytrace_range_ / resolution_);
+
+    if (max_raytrace_range_in_cells < size_y_ || max_raytrace_range_in_cells < size_x_)
+    {
+      ROS_WARN_STREAM_ONCE(
+          "The raytrace_range is set to something smaller than the costmap size, max_raytrace_range_in_cells: " << max_raytrace_range_in_cells << ", costmap size: " << size_x_ << "x" << size_y_);
+      ROS_WARN_ONCE(
+          "Make sure that the measurements stay inside the raytrace_range, else some nice random memory over-writing happens.");
+    }
+
+    update_area_center = max_raytrace_range_in_cells + 1; // +1 to have a buffer
+    unsigned int cached_update_area_width = update_area_center * 2 + 1; //+1 to have a center point
+
+    voxel_clearer = boost::shared_ptr<voxel_grid::CachedClearer>(
+        new voxel_grid::CachedClearer(voxel_grid_.getData(), costmap_, voxel_grid_.sizeX(), voxel_grid_.sizeY(),
+                                      cached_update_area_width, clear_corner_cases_,
+                                      unknown_threshold_, mark_threshold_, FREE_SPACE, NO_INFORMATION));
+  }
+  else
+  {
+    voxel_clearer = boost::shared_ptr<voxel_grid::SimpleClearer>(
+        new voxel_grid::SimpleClearer(voxel_grid_.getData(), costmap_, unknown_threshold_, mark_threshold_, FREE_SPACE,
+                                      NO_INFORMATION));
+  }
+
+  bool publish_clearing_points = (clearing_endpoints_pub_.getNumSubscribers() > 0);
+  if (publish_clearing_points)
+  {
+    clearing_endpoints_.points.clear();
+  }
+
+  for (unsigned int i = 0; i < observations.size(); ++i)
+  {
+    raytraceFreespace(observations[i], voxel_clearer, min_x, min_y, max_x, max_y, update_area_center);
+  }
+
+  if (use_cached_updating_)
+  {
+    boost::shared_ptr<voxel_grid::CachedClearer> cached_clearer = boost::static_pointer_cast<voxel_grid::CachedClearer>(
+        voxel_clearer);
+
+    cached_clearer->update();
+
+    updated_cells_indices_ = cached_clearer->getClearedCellsIndices();
+
+    bool publish_cleared_points = (cleared_points_pub_.getNumSubscribers() > 0);
+    if (publish_cleared_points)
+    {
+      sensor_msgs::PointCloud cleared_voxels = cached_clearer->getClearedVoxels();
+      convertFromMapToWorld(cleared_voxels);
+
+      cleared_voxels.header.frame_id = global_frame_;
+      cleared_voxels.header.stamp = ros::Time::now();
+      cleared_points_pub_.publish(cleared_voxels);
+    }
+  }
+
+  if (publish_clearing_points && !observations.empty())
+  {
+    clearing_endpoints_.header.frame_id = global_frame_;
+    //don't know which one to use in case of multiple observations, so just use last one
+    clearing_endpoints_.header.stamp = pcl_conversions::fromPCL(observations.back().cloud_->header).stamp;
+    clearing_endpoints_.header.seq = observations.back().cloud_->header.seq;
+
+    clearing_endpoints_pub_.publish(clearing_endpoints_);
+  }
+
+}
+
+void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, boost::shared_ptr<voxel_grid::AbstractGridUpdater> voxel_clearer,
+                                   double* min_x, double* min_y, double* max_x, double* max_y, unsigned int update_area_center)
 {
   if (clearing_observation.cloud_->points.size() == 0)
     return;
@@ -316,26 +390,13 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     return;
   }
 
-  boost::shared_ptr<voxel_grid::AbstractGridUpdater> voxel_clearer;
   double start_offset_x;
   double start_offset_y;
-  unsigned int cached_update_area_width;
+  unsigned int cached_update_area_width = update_area_center * 2 + 1;
+  bool publish_clearing_points = (clearing_endpoints_pub_.getNumSubscribers() > 0);
 
   if (use_cached_updating_)
   {
-    unsigned int max_raytrace_range_in_cells = std::floor(max_raytrace_range_ / resolution_);
-
-    if (max_raytrace_range_in_cells < size_y_ || max_raytrace_range_in_cells < size_x_)
-    {
-      ROS_WARN_STREAM_ONCE(
-          "The raytrace_range is set to something smaller than the costmap size, max_raytrace_range_in_cells: " << max_raytrace_range_in_cells << ", costmap size: " << size_x_ << "x" << size_y_);
-      ROS_WARN_ONCE(
-          "Make sure that the measurements stay inside the raytrace_range, else some nice random memory over-writing happens.");
-    }
-
-    unsigned int update_area_center = max_raytrace_range_in_cells + 1; // +1 to have a buffer
-    cached_update_area_width = update_area_center * 2 + 1; //+1 to have a center point
-
     int offset_x = update_area_center - (int)sensor_x;
     int offset_y = update_area_center - (int)sensor_y;
 
@@ -345,23 +406,10 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     start_offset_x = update_area_center + fabs(modf(sensor_x, &temp));
     start_offset_y = update_area_center + fabs(modf(sensor_y, &temp));
 
-    voxel_clearer = boost::shared_ptr<voxel_grid::CachedClearer>(
-        new voxel_grid::CachedClearer(voxel_grid_.getData(), costmap_, voxel_grid_.sizeX(), voxel_grid_.sizeY(),
-                                      offset_x, offset_y, cached_update_area_width, clear_corner_cases_,
-                                      unknown_threshold_, mark_threshold_, FREE_SPACE, NO_INFORMATION));
-  }
-  else
-  {
-    voxel_clearer = boost::shared_ptr<voxel_grid::SimpleClearer>(
-        new voxel_grid::SimpleClearer(voxel_grid_.getData(), costmap_, unknown_threshold_, mark_threshold_, FREE_SPACE,
-                                      NO_INFORMATION));
-  }
+    boost::shared_ptr<voxel_grid::CachedClearer> cached_clearer = boost::static_pointer_cast<voxel_grid::CachedClearer>(
+        voxel_clearer);
 
-  bool publish_clearing_points = (clearing_endpoints_pub_.getNumSubscribers() > 0);
-  if (publish_clearing_points)
-  {
-    clearing_endpoints_.points.clear();
-    clearing_endpoints_.points.reserve(clearing_observation.cloud_->points.size());
+    cached_clearer->setCostmapOffsets(offset_x, offset_y);
   }
 
   // we can pre-compute the enpoints of the map outside of the inner loop... we'll need these later
@@ -478,36 +526,6 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
       point.z = wpz;
       clearing_endpoints_.points.push_back(point);
     }
-  }
-
-  if (use_cached_updating_)
-  {
-    boost::shared_ptr<voxel_grid::CachedClearer> cached_clearer = boost::static_pointer_cast<voxel_grid::CachedClearer>(
-        voxel_clearer);
-
-    cached_clearer->update();
-
-    updated_cells_indices_ = cached_clearer->getClearedCellsIndices();
-
-    bool publish_cleared_points = (cleared_points_pub_.getNumSubscribers() > 0);
-    if (publish_cleared_points)
-    {
-      sensor_msgs::PointCloud cleared_voxels = cached_clearer->getClearedVoxels();
-      convertFromMapToWorld(cleared_voxels);
-
-      cleared_voxels.header.frame_id = global_frame_;
-      cleared_voxels.header.stamp = ros::Time::now();
-      cleared_points_pub_.publish(cleared_voxels);
-    }
-  }
-
-  if (publish_clearing_points)
-  {
-    clearing_endpoints_.header.frame_id = global_frame_;
-    clearing_endpoints_.header.stamp = pcl_conversions::fromPCL(clearing_observation.cloud_->header).stamp;
-    clearing_endpoints_.header.seq = clearing_observation.cloud_->header.seq;
-
-    clearing_endpoints_pub_.publish(clearing_endpoints_);
   }
 }
 

@@ -17,29 +17,38 @@ class CachedClearer : public AbstractGridUpdater
 {
 public:
   CachedClearer(uint32_t* voxel_grid_data, unsigned char* costmap, unsigned int costmap_size_x,
-                  unsigned int costmap_size_y, int offset_from_costmap_x, int offset_from_costmap_y,
-                  unsigned int cache_width, bool z_is_offset, unsigned int unknown_clear_threshold, unsigned int marked_clear_threshold,
-                  unsigned char free_cost = 0, unsigned char unknown_cost = 255) :
+                unsigned int costmap_size_y, unsigned int cache_width, bool z_is_offset,
+                unsigned int unknown_clear_threshold, unsigned int marked_clear_threshold, unsigned char free_cost = 0,
+                unsigned char unknown_cost = 255) :
       AbstractGridUpdater(voxel_grid_data, costmap, unknown_clear_threshold, marked_clear_threshold, free_cost,
                           unknown_cost)
   {
     costmap_size_x_ = costmap_size_x;
     costmap_size_y_ = costmap_size_y;
 
-    offset_from_costmap_x_ = offset_from_costmap_x;
-    offset_from_costmap_y_ = offset_from_costmap_y;
+    //should be overwritten later
+    offset_from_costmap_x_ = costmap_size_x * 0.5;
+    offset_from_costmap_y_ = costmap_size_y * 0.5;
+
     cache_width_ = cache_width;
     z_is_offset_ = z_is_offset;
 
     unsigned int cache_size = cache_width_ * cache_width_;
     clearing_masks_cache_ = boost::shared_ptr<uint32_t[]>(new uint32_t[cache_size]);
-    updated_cells_indices_ = boost::shared_ptr<std::list<std::pair<unsigned int, unsigned int> > >(new std::list<std::pair<unsigned int, unsigned int> >);
+    updated_cells_indices_ = boost::shared_ptr < std::list<std::pair<unsigned int, unsigned int> >
+        > (new std::list<std::pair<unsigned int, unsigned int> >);
 
     uint32_t empty_mask = (uint32_t)0;
     for (int i = 0; i < cache_size; ++i)
       clearing_masks_cache_[i] = empty_mask;
   }
   ;
+
+  virtual void setCostmapOffsets(int offset_from_costmap_x, int offset_from_costmap_y)
+  {
+    offset_from_costmap_x_ = offset_from_costmap_x;
+    offset_from_costmap_y_ = offset_from_costmap_y;
+  }
 
   inline virtual void operator()(unsigned int offset, uint32_t z_mask)
   {
@@ -85,7 +94,7 @@ public:
           continue;
         }
 
-        if(z_is_offset_)
+        if (z_is_offset_)
           clearing_mask = undo_clearing_mask_offset(clearing_mask);
 
         if (costmap_x < 0)
@@ -120,7 +129,7 @@ public:
   inline virtual uint32_t undo_clearing_mask_offset(uint32_t clearing_mask)
   {
     clearing_mask >>= 1;
-    uint32_t lower_bits_mask = ~((uint32_t)0)>>16;
+    uint32_t lower_bits_mask = ~((uint32_t)0) >> 16;
 
     return (clearing_mask << 16) | (clearing_mask & lower_bits_mask);
   }
@@ -145,11 +154,11 @@ protected:
     {
       if (bitsBelowThreshold(unknown_bits, unknown_clear_threshold_))
       {
-        costmap_[costmap_index] = free_cost_;
+        costmap_[costmap_index] = unknown_cost_;
       }
       else
       {
-        costmap_[costmap_index] = unknown_cost_;
+        costmap_[costmap_index] = free_cost_;
       }
     }
   }

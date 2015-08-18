@@ -14,6 +14,8 @@ void ExtendedObstacleLayer::onInitialize()
   private_nh.param("combination_method", combination_method_, 1);
   ROS_INFO("%s is using combination_method %d", name_.c_str(), combination_method_);
 
+  private_nh.param("reset_every_cycle", reset_every_cycle_, false);
+
   ros::NodeHandle global_nh;
 
   std::string update_subscribe_topic;
@@ -29,7 +31,9 @@ void ExtendedObstacleLayer::onInitialize()
 void ExtendedObstacleLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
                                       double* max_x, double* max_y)
 {
-  resetMaps();
+  if(reset_every_cycle_)
+    resetMaps();
+
   ObstacleLayer::updateBounds(robot_x, robot_y, robot_yaw, min_x, min_y, max_x, max_y);
 }
 
