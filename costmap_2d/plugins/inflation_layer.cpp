@@ -35,6 +35,7 @@
  * Author: Eitan Marder-Eppstein
  *         David V. Lu!!
  *********************************************************************/
+#include <algorithm>
 #include <costmap_2d/inflation_layer.h>
 #include <costmap_2d/costmap_math.h>
 #include <costmap_2d/footprint.h>
@@ -126,6 +127,11 @@ void InflationLayer::matchSize()
 void InflationLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x,
                                            double* min_y, double* max_x, double* max_y)
 {
+  static double last_min_x =  -std::numeric_limits<float>::max();
+  static double last_min_y = -std::numeric_limits<float>::max();
+  static double last_max_x = std::numeric_limits<float>::max();
+  static double last_max_y = std::numeric_limits<float>::max();
+
   if (need_reinflation_)
   {
     // For some reason when I make these -<double>::max() it does not
@@ -136,7 +142,13 @@ void InflationLayer::updateBounds(double robot_x, double robot_y, double robot_y
     *max_x = std::numeric_limits<float>::max();
     *max_y = std::numeric_limits<float>::max();
     need_reinflation_ = false;
+  } else {
+    *min_x = std::min(*min_x, last_min_x) - inflation_radius_;
+    *min_y = std::min(*min_y, last_min_y) - inflation_radius_;
+    *max_x = std::max(*max_x, last_max_x) + inflation_radius_;
+    *max_y = std::max(*max_y, last_max_y) + inflation_radius_;
   }
+  last_min_x = *min_x; last_min_y = *min_y; last_max_x = *max_x; last_max_y = *max_y;
 }
 
 void InflationLayer::onFootprintChanged()
