@@ -107,10 +107,8 @@ add_library(layers
   plugins/footprint_layer.cpp
   plugins/inflation_layer.cpp
   plugins/obstacle_layer.cpp
-  plugins/extended_obstacle_layer.cpp
   plugins/static_layer.cpp
   plugins/voxel_layer.cpp
-  plugins/extended_voxel_layer.cpp
   src/observation_buffer.cpp
 )
 target_link_libraries(layers
