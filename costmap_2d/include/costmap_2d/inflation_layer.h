@@ -110,7 +110,7 @@ public:
   /** @brief  Given a distance, compute a cost.
    * @param  distance The distance from an obstacle in cells
    * @return A cost value for the distance */
-  inline unsigned char computeCost(double distance) const
+  virtual inline unsigned char computeCost(double distance) const
   {
     unsigned char cost = 0;
     if (distance == 0)
