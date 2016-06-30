@@ -295,14 +295,6 @@ void VoxelLayer::clear(std::vector<Observation>& observations, double* min_x, do
   {
     unsigned int max_raytrace_range_in_cells = std::floor(max_raytrace_range_ / resolution_);
 
-    if (max_raytrace_range_in_cells < size_y_ || max_raytrace_range_in_cells < size_x_)
-    {
-      ROS_WARN_STREAM_ONCE(
-          "The raytrace_range is set to something smaller than the costmap size, max_raytrace_range_in_cells: " << max_raytrace_range_in_cells << ", costmap size: " << size_x_ << "x" << size_y_);
-      ROS_WARN_ONCE(
-          "Make sure that the measurements stay inside the raytrace_range, else some nice random memory over-writing happens.");
-    }
-
     update_area_center = max_raytrace_range_in_cells + 1; // +1 to have a buffer
     unsigned int cached_update_area_width = update_area_center * 2 + 1; //+1 to have a center point
 
