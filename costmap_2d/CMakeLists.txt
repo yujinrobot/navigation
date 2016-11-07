@@ -19,6 +19,7 @@ find_package(catkin REQUIRED
             std_msgs
             tf
             voxel_grid
+            ecl_time
         )
 
 find_package(PCL REQUIRED)
@@ -78,6 +79,7 @@ catkin_package(
         std_msgs
         tf
         voxel_grid
+        ecl_time
     DEPENDS
         PCL
         Eigen

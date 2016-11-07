@@ -41,6 +41,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <ecl/time/stopwatch.hpp>
 
 using std::vector;
 
@@ -76,11 +77,15 @@ void LayeredCostmap::resizeMap(unsigned int size_x, unsigned int size_y, double 
   }
 }
 
-void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
+void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw, bool publish_timestamps)
 {
+  ecl::StopWatch watch;
+
   // Lock for the remainder of this function, some plugins (e.g. VoxelLayer)
   // implement thread unsafe updateBounds() functions.
   boost::unique_lock<Costmap2D::mutex_t> lock(*(costmap_.getMutex()));
+  if(publish_timestamps)
+    std::cout << global_frame_ << "_layered_lock " << watch.split() * 1000 << std::endl;
 
   // if we're using a rolling buffer costmap... we need to update the origin using the robot's position
   if (rolling_window_)
@@ -89,6 +94,9 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
     double new_origin_y = robot_y - costmap_.getSizeInMetersY() / 2;
     costmap_.updateOrigin(new_origin_x, new_origin_y);
   }
+
+  if(publish_timestamps)
+    std::cout << global_frame_ << "_rolling " << watch.split() * 1000 << std::endl;
 
   if (plugins_.size() == 0)
     return;
@@ -112,6 +120,9 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
                         minx_, miny_, maxx_ , maxy_,
                         (*plugin)->getName().c_str());
     }
+
+    if(publish_timestamps)
+      std::cout << global_frame_ << "_update_bounds_" << (*plugin)->getName() << " " << watch.split() * 1000 << std::endl;
   }
 
   int x0, xn, y0, yn;
@@ -129,10 +140,17 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
     return;
 
   costmap_.resetMap(x0, y0, xn, yn);
+
+  if(publish_timestamps)
+    std::cout << global_frame_ << "_reset " << watch.split() * 1000 << std::endl;
+
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
        ++plugin)
   {
     (*plugin)->updateCosts(costmap_, x0, y0, xn, yn);
+
+    if(publish_timestamps)
+      std::cout << global_frame_ << "_update_costs_" << (*plugin)->getName() << " " << watch.split() * 1000 << std::endl;
   }
 
   bx0_ = x0;
@@ -141,6 +159,9 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
   byn_ = yn;
 
   initialized_ = true;
+
+  if(publish_timestamps)
+    std::cout << global_frame_ << "_finish " << watch.split() * 1000 << std::endl;
 }
 
 bool LayeredCostmap::isCurrent()

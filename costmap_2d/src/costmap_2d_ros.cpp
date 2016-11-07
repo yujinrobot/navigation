@@ -41,6 +41,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <ecl/time/stopwatch.hpp>
 
 
 using namespace std;
@@ -302,6 +303,8 @@ void Costmap2DROS::reconfigureCB(costmap_2d::Costmap2DConfig &config, uint32_t l
 
   old_config_ = config;
 
+  publish_timestamps_ = config.timestamps;
+
   map_update_thread_ = new boost::thread(boost::bind(&Costmap2DROS::mapUpdateLoop, this, map_update_frequency));
 }
 
@@ -378,6 +381,8 @@ void Costmap2DROS::mapUpdateLoop(double frequency)
   if (frequency == 0.0)
     return;
 
+  ecl::StopWatch watch;
+
   ros::NodeHandle nh;
   ros::Rate r(frequency);
   while (nh.ok() && !map_update_thread_shutdown_)
@@ -386,7 +391,12 @@ void Costmap2DROS::mapUpdateLoop(double frequency)
     double start_t, end_t, t_diff;
     gettimeofday(&start, NULL);
 
+    watch.restart();
+
     updateMap();
+
+    if(publish_timestamps_)
+      std::cout << name_ << "_update_full " << watch.split() * 1000 << std::endl;
 
     gettimeofday(&end, NULL);
     start_t = start.tv_sec + double(start.tv_usec) / 1e6;
@@ -397,12 +407,20 @@ void Costmap2DROS::mapUpdateLoop(double frequency)
     {
       unsigned int x0, y0, xn, yn;
       layered_costmap_->getBounds(&x0, &xn, &y0, &yn);
+      if(publish_timestamps_)
+        std::cout << name_ << "_getBounds " << watch.split() * 1000 << std::endl;
+
       publisher_->updateBounds(x0, xn, y0, yn);
+      if(publish_timestamps_)
+        std::cout << name_ << "_updateBounds " << watch.split() * 1000 << std::endl;
 
       ros::Time now = ros::Time::now();
       if (last_publish_ + publish_cycle < now)
       {
         publisher_->publishCostmap();
+        if(publish_timestamps_)
+          std::cout << name_ << "_publish " << watch.split() * 1000 << std::endl;
+
         last_publish_ = now;
       }
     }
@@ -416,6 +434,8 @@ void Costmap2DROS::mapUpdateLoop(double frequency)
 
 void Costmap2DROS::updateMap()
 {
+  ecl::StopWatch watch;
+
   if (!stop_updates_)
   {
     // get global pose
@@ -426,7 +446,13 @@ void Costmap2DROS::updateMap()
              y = pose.getOrigin().y(),
              yaw = tf::getYaw(pose.getRotation());
 
-      layered_costmap_->updateMap(x, y, yaw);
+      if(publish_timestamps_)
+        std::cout << name_ << "_getPose " << watch.split() * 1000 << std::endl;
+
+      layered_costmap_->updateMap(x, y, yaw, publish_timestamps_);
+
+      if(publish_timestamps_)
+        std::cout << name_ << "_updateMap " << watch.split() * 1000 << std::endl;
 
       geometry_msgs::PolygonStamped footprint;
       footprint.header.frame_id = global_frame_;
@@ -435,6 +461,9 @@ void Costmap2DROS::updateMap()
       footprint_pub_.publish(footprint);
 
       initialized_ = true;
+
+      if(publish_timestamps_)
+        std::cout << name_ << "_footprint " << watch.split() * 1000 << std::endl;
     }
   }
 }
