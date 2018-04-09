@@ -2,48 +2,50 @@
 Changelog for package map_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.12.13 (2016-08-15)
---------------------
-
-1.12.12 (2016-06-24)
---------------------
-
-1.12.11 (2016-06-08)
---------------------
-
-1.12.10 (2016-05-27)
---------------------
-
-1.12.9 (2016-05-26)
+1.14.3 (2018-03-16)
 -------------------
+* Merge pull request `#672 <https://github.com/ros-planning/navigation/issues/672>`_ from ros-planning/email_update_kinetic
+  update maintainer email (kinetic)
+* Merge pull request `#648 <https://github.com/ros-planning/navigation/issues/648>`_ from aaronhoy/kinetic_add_ahoy
+  Add myself as a maintainer.
+* Print SDL error on IMG_Load failure in server_map (`#631 <https://github.com/ros-planning/navigation/issues/631>`_)
+* Contributors: Aaron Hoy, Aurélien Labate, Michael Ferguson
 
-1.12.8 (2016-05-16)
+1.14.2 (2017-08-14)
+-------------------
+* remove offending library export (fixes `#612 <https://github.com/ros-planning/navigation/issues/612>`_)
+* Contributors: Michael Ferguson
+
+1.14.1 (2017-08-07)
+-------------------
+* refactor to not use tf version 1 (`#561 <https://github.com/ros-planning/navigation/issues/561>`_)
+* Fix CMakeLists + package.xmls (`#548 <https://github.com/ros-planning/navigation/issues/548>`_)
+* Merge pull request `#560 <https://github.com/ros-planning/navigation/issues/560>`_ from wjwwood/map_server_fixup_cmake
+* update to support Python 2 and 3 (`#559 <https://github.com/ros-planning/navigation/issues/559>`_)
+* remove duplicate and unreferenced file (`#558 <https://github.com/ros-planning/navigation/issues/558>`_)
+* remove trailing whitespace from map_server package (`#557 <https://github.com/ros-planning/navigation/issues/557>`_)
+* fix cmake use of yaml-cpp and sdl / sdl-image
+* Contributors: Martin Günther, Michael Ferguson, Vincent Rabaud, William Woodall
+
+1.14.0 (2016-05-20)
 -------------------
 * Corrections to alpha channel detection and usage.
+  Changing to actually detect whether the image has an alpha channel instead of
+  inferring based on the number of channels.
+  Also reverting to legacy behavior of trinary mode overriding alpha removal.
+  This will cause the alpha channel to be averaged in with the others in trinary
+  mode, which is the current behavior before this PR.
 * Removing some trailing whitespace.
 * Use enum to control map interpretation
 * Contributors: Aaron Hoy, David Lu
 
-1.12.7 (2016-01-05)
+1.13.1 (2015-10-29)
 -------------------
 
-1.12.6 (2016-01-02)
+1.13.0 (2015-03-17)
 -------------------
-
-1.12.5 (2015-10-29)
--------------------
-
-1.12.4 (2015-06-03)
--------------------
-
-1.12.3 (2015-04-30)
--------------------
-
-1.12.2 (2015-03-31)
--------------------
-
-1.12.1 (2015-03-14)
--------------------
+* rename image_loader library, fixes `#208 <https://github.com/ros-planning/navigation/issues/208>`_
+* Contributors: Michael Ferguson
 
 1.12.0 (2015-02-04)
 -------------------

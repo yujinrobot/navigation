@@ -219,20 +219,24 @@ std::vector<geometry_msgs::Point> makeFootprintFromParams(ros::NodeHandle& nh)
   {
     XmlRpc::XmlRpcValue footprint_xmlrpc;
     nh.getParam(full_param_name, footprint_xmlrpc);
-    if (footprint_xmlrpc.getType() == XmlRpc::XmlRpcValue::TypeString)
+    if (footprint_xmlrpc.getType() == XmlRpc::XmlRpcValue::TypeString &&
+        footprint_xmlrpc != "" && footprint_xmlrpc != "[]")
     {
       if (makeFootprintFromString(std::string(footprint_xmlrpc), points))
       {
         writeFootprintToParam(nh, points);
+        return points;
       }
     }
     else if (footprint_xmlrpc.getType() == XmlRpc::XmlRpcValue::TypeArray)
     {
       points = makeFootprintFromXMLRPC(footprint_xmlrpc, full_param_name);
       writeFootprintToParam(nh, points);
+      return points;
     }
   }
-  else if (nh.searchParam("robot_radius", full_radius_param_name))
+
+  if (nh.searchParam("robot_radius", full_radius_param_name))
   {
     double robot_radius;
     nh.param(full_radius_param_name, robot_radius, 1.234);
@@ -317,8 +321,5 @@ std::vector<geometry_msgs::Point> makeFootprintFromXMLRPC(XmlRpc::XmlRpcValue& f
   }
   return footprint;
 }
-
-
-
 
 }  // end namespace costmap_2d

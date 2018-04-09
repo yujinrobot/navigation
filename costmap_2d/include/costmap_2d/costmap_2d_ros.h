@@ -78,7 +78,12 @@ public:
    * @param tf A reference to a TransformListener
    */
   Costmap2DROS(std::string name, tf::TransformListener& tf);
+
+#if 0
   virtual ~Costmap2DROS();
+#else
+  ~Costmap2DROS();
+#endif  
 
   /**
    * @brief  Subscribes to sensor topics if necessary and starts costmap
@@ -102,7 +107,12 @@ public:
    */
   void resume();
 
+  // _yujinEdit_
+#if 1
   virtual void updateMap();
+#else
+  void updateMap();
+#endif
 
   /**
    * @brief Reset each individual layer

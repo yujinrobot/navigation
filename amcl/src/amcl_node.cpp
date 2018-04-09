@@ -31,10 +31,10 @@
 // Signal handling
 #include <signal.h>
 
-#include "map/map.h"
-#include "pf/pf.h"
-#include "sensors/amcl_odom.h"
-#include "sensors/amcl_laser.h"
+#include "amcl/map/map.h"
+#include "amcl/pf/pf.h"
+#include "amcl/sensors/amcl_odom.h"
+#include "amcl/sensors/amcl_laser.h"
 
 #include "ros/assert.h"
 
@@ -802,6 +802,11 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
            msg.info.width,
            msg.info.height,
            msg.info.resolution);
+  
+  if(msg.header.frame_id != global_frame_id_)
+    ROS_WARN("Frame_id of map received:'%s' doesn't match global_frame_id:'%s'. This could cause issues with reading published topics",
+             msg.header.frame_id.c_str(),
+             global_frame_id_.c_str());
 
   freeMapDependentMemory();
   // Clear queued laser objects because they hold pointers to the existing

@@ -2,48 +2,46 @@
 Changelog for package base_local_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.12.13 (2016-08-15)
---------------------
+1.14.3 (2018-03-16)
+-------------------
+* Merge pull request `#672 <https://github.com/ros-planning/navigation/issues/672>`_ from ros-planning/email_update_kinetic
+  update maintainer email (kinetic)
+* CostmapModel: Make lineCost and pointCost public (`#660 <https://github.com/ros-planning/navigation/issues/660>`_)
+  Make the methods `lineCost` and `pointCost` of the CostmapModel class
+  public so they can be used outside of the class.
+  Both methods are not changing the instance, so this should not cause any
+  problems.  To emphasise their constness, add the actual `const` keyword.
+* Merge pull request `#648 <https://github.com/ros-planning/navigation/issues/648>`_ from aaronhoy/kinetic_add_ahoy
+  Add myself as a maintainer.
+* Contributors: Aaron Hoy, Felix Widmaier, Michael Ferguson
 
-1.12.12 (2016-06-24)
---------------------
-
-1.12.11 (2016-06-08)
---------------------
-
-1.12.10 (2016-05-27)
---------------------
-
-1.12.9 (2016-05-26)
+1.14.2 (2017-08-14)
 -------------------
 
-1.12.8 (2016-05-16)
+1.14.1 (2017-08-07)
+-------------------
+* Merge pull request `#570 <https://github.com/ros-planning/navigation/issues/570>`_ from codebot/add_twirling_cost_function
+* Fix CMakeLists + package.xmls (`#548 <https://github.com/ros-planning/navigation/issues/548>`_)
+* Add cost function to prevent unnecessary spinning
+* make rostest in CMakeLists optional (`ros/rosdistro#3010 <https://github.com/ros/rosdistro/issues/3010>`_)
+* remove GCC warnings
+* Contributors: Lukas Bulwahn, Martin Günther, Michael Ferguson, Morgan Quigley, Vincent Rabaud, lengly
+
+1.14.0 (2016-05-20)
 -------------------
 
-1.12.7 (2016-01-05)
--------------------
-
-1.12.6 (2016-01-02)
--------------------
-
-1.12.5 (2015-10-29)
+1.13.1 (2015-10-29)
 -------------------
 * base_local_planner: some fixes in goal_functions
-* Contributors: Gael Ecorchard
-
-1.12.4 (2015-06-03)
--------------------
+* Merge pull request `#348 <https://github.com/ros-planning/navigation/issues/348>`_ from mikeferguson/trajectory_planner_fixes
 * fix stuck_left/right calculation
+* fix calculation of heading diff
+* Contributors: Gael Ecorchard, Michael Ferguson
+
+1.13.0 (2015-03-17)
+-------------------
+* remove previously deprecated param
 * Contributors: Michael Ferguson
-
-1.12.3 (2015-04-30)
--------------------
-
-1.12.2 (2015-03-31)
--------------------
-
-1.12.1 (2015-03-14)
--------------------
 
 1.12.0 (2015-02-04)
 -------------------

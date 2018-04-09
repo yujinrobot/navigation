@@ -2,43 +2,36 @@
 Changelog for package robot_pose_ekf
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.12.13 (2016-08-15)
---------------------
+1.14.3 (2018-03-16)
+-------------------
+* Merge pull request `#672 <https://github.com/ros-planning/navigation/issues/672>`_ from ros-planning/email_update_kinetic
+  update maintainer email (kinetic)
+* Fixes `#313 <https://github.com/ros-planning/navigation/issues/313>`_ (kinetic) (`#654 <https://github.com/ros-planning/navigation/issues/654>`_)
+* Merge pull request `#648 <https://github.com/ros-planning/navigation/issues/648>`_ from aaronhoy/kinetic_add_ahoy
+  Add myself as a maintainer.
+* added message_generation to build deps to prevent failing generation of GetStatus, MakeNavPlan and SetCostmap (`#640 <https://github.com/ros-planning/navigation/issues/640>`_)
+* Contributors: Aaron Hoy, David V. Lu!!, Leroy Rügemer, Michael Ferguson
 
-1.12.12 (2016-06-24)
---------------------
-
-1.12.11 (2016-06-08)
---------------------
-
-1.12.10 (2016-05-27)
---------------------
-
-1.12.9 (2016-05-26)
+1.14.2 (2017-08-14)
 -------------------
 
-1.12.8 (2016-05-16)
+1.14.1 (2017-08-07)
+-------------------
+* Fix CMakeLists + package.xmls (`#548 <https://github.com/ros-planning/navigation/issues/548>`_)
+* Initialization of filter with GPS and odometry.
+* Contributors: Martin Günther, Vincent Rabaud, azaganidis
+
+1.14.0 (2016-05-20)
+-------------------
+* add to install script/ directory
+* add execute bit to scripts/wtf.py
+* robot_pose_ekf/src/odom_estimation_node.cpp: add to print gps sensor and used/not used in getStatus
+* Contributors: Kei Okada
+
+1.13.1 (2015-10-29)
 -------------------
 
-1.12.7 (2016-01-05)
--------------------
-
-1.12.6 (2016-01-02)
--------------------
-
-1.12.5 (2015-10-29)
--------------------
-
-1.12.4 (2015-06-03)
--------------------
-
-1.12.3 (2015-04-30)
--------------------
-
-1.12.2 (2015-03-31)
--------------------
-
-1.12.1 (2015-03-14)
+1.13.0 (2015-03-17)
 -------------------
 
 1.12.0 (2015-02-04)

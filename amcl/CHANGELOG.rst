@@ -2,53 +2,62 @@
 Changelog for package amcl
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.12.13 (2016-08-15)
---------------------
+1.14.3 (2018-03-16)
+-------------------
+* Merge pull request `#678 <https://github.com/ros-planning/navigation/issues/678>`_ from SammysHP/patch-1
+  Fix minor typo
+* Merge pull request `#666 <https://github.com/ros-planning/navigation/issues/666>`_ from SteveMacenski/kinetic-devel
+  removing recomputation of cluster stats causing assertion error (`#634 <https://github.com/ros-planning/navigation/issues/634>`_)
+* Merge pull request `#672 <https://github.com/ros-planning/navigation/issues/672>`_ from ros-planning/email_update_kinetic
+  update maintainer email (kinetic)
+* Merge pull request `#648 <https://github.com/ros-planning/navigation/issues/648>`_ from aaronhoy/kinetic_add_ahoy
+  Add myself as a maintainer.
+* Contributors: Aaron Hoy, Michael Ferguson, SammysHP, stevemacenski
 
-1.12.12 (2016-06-24)
---------------------
-
-1.12.11 (2016-06-08)
---------------------
-
-1.12.10 (2016-05-27)
---------------------
-
-1.12.9 (2016-05-26)
+1.14.2 (2017-08-14)
 -------------------
 
-1.12.8 (2016-05-16)
+1.14.1 (2017-08-07)
+-------------------
+* Reference Issue `#592 <https://github.com/ros-planning/navigation/issues/592>`_ Added warning to AMCL when map is published on ... (`#604 <https://github.com/ros-planning/navigation/issues/604>`_)
+* recompute cluster stat when force_publication
+* Fix CMakeLists + package.xmls (`#548 <https://github.com/ros-planning/navigation/issues/548>`_)
+* amcl: fix compilation with gcc v7
+* Added deps to amcl costmap_2d move_base (`#512 <https://github.com/ros-planning/navigation/issues/512>`_)
+* fix order of parameters (closes `#553 <https://github.com/ros-planning/navigation/issues/553>`_)
+* Fix potential string overflow and resource leak
+* Contributors: Dmitry Rozhkov, Laurent GEORGE, Martin Günther, Michael Ferguson, Peter Harliman Liem, mryellow, vik748
+
+1.14.0 (2016-05-20)
 -------------------
 * Allow AMCL to run from bag file to allow very fast testing.
-* Fixes interpretation of a delayed initialpose message
-* Contributors: Derek King, Michael Ferguson, Stephan Wirth
+* Fixes interpretation of a delayed initialpose message (see `#424 <https://github.com/ros-planning/navigation/issues/424>`_).
+  The tf lookup as it was before this change was very likely to fail as
+  ros::Time::now() was used to look up a tf without waiting on the tf's
+  availability. Additionally, the computation of the "new pose" by
+  multiplying the delta that the robot moved from the initialpose's
+  timestamp to ros::Time::now() was wrong. That delta has to by multiplied
+  from the right to the "old pose".
+  This commit also changes the reference frame to look up this delta to be
+  the odom frame as this one is supposed to be smooth and therefore the
+  best reference to get relative robot motion in the robot (base link) frame.
+* New unit test for proper interpretation of a delayed initialpose message.
+  Modifies the set_pose.py script to be able to send an initial pose with
+  a user defined time stamp at a user defined time. Adds a rostest to
+  exercise this new option.
+  This reveals the issues mentioned in `#424 <https://github.com/ros-planning/navigation/issues/424>`_ (the new test fails).
+* Contributors: Derek King, Stephan Wirth
 
-1.12.7 (2016-01-05)
+1.13.1 (2015-10-29)
 -------------------
-
-1.12.6 (2016-01-02)
--------------------
-
-1.12.5 (2015-10-29)
--------------------
-
-1.12.4 (2015-06-03)
--------------------
-* add the set_map service to amcl
+* adds the set_map service to amcl
+* fix pthread_mutex_lock on shutdown
 * Contributors: Michael Ferguson, Stephan Wirth
 
-1.12.3 (2015-04-30)
--------------------
-
-1.12.2 (2015-03-31)
--------------------
-* fix pthread_mutex_lock on shutdown
-* Contributors: Michael Ferguson
-
-1.12.1 (2015-03-14)
+1.13.0 (2015-03-17)
 -------------------
 * amcl_node will now save latest pose on shutdown
-* Contributors: iandanforth
+* Contributors: Ian Danforth
 
 1.12.0 (2015-02-04)
 -------------------

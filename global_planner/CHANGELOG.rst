@@ -2,49 +2,45 @@
 Changelog for package global_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1.12.13 (2016-08-15)
---------------------
+1.14.3 (2018-03-16)
+-------------------
+* Merge pull request `#672 <https://github.com/ros-planning/navigation/issues/672>`_ from ros-planning/email_update_kinetic
+  update maintainer email (kinetic)
+* Merge pull request `#648 <https://github.com/ros-planning/navigation/issues/648>`_ from aaronhoy/kinetic_add_ahoy
+  Add myself as a maintainer.
+* Rebase PRs from Indigo (`#636 <https://github.com/ros-planning/navigation/issues/636>`_)
+  * Update gradient_path.cpp (`#576 <https://github.com/ros-planning/navigation/issues/576>`_)
+  * Update gradient_path.cpp
+  * Update navfn.cpp
+  * Only do a getRobotPose when no start pose is given (`#628 <https://github.com/ros-planning/navigation/issues/628>`_)
+  Omit the unnecessary call to getRobotPose when the start pose was
+  already given, so that move_base can also generate a path in
+  situations where getRobotPose would fail.
+  This is actually to work around an issue of getRobotPose randomly
+  failing.
+* Contributors: Aaron Hoy, David V. Lu!!, Michael Ferguson
 
-1.12.12 (2016-06-24)
---------------------
-
-1.12.11 (2016-06-08)
---------------------
-* [Fix] Illegal vector visit when no path planned
-* Contributors: gjc13
-
-1.12.10 (2016-05-27)
---------------------
-
-1.12.9 (2016-05-26)
+1.14.2 (2017-08-14)
 -------------------
 
-1.12.8 (2016-05-16)
+1.14.1 (2017-08-07)
+-------------------
+* Fix CMakeLists + package.xmls (`#548 <https://github.com/ros-planning/navigation/issues/548>`_)
+* Fix to increment 'cycle' in while loop (`#546 <https://github.com/ros-planning/navigation/issues/546>`_)
+* Fix to check index value before accessing to element of potential array (`#547 <https://github.com/ros-planning/navigation/issues/547>`_)
+* Set frame_id and stamp on Path message even if path is not found. (`#533 <https://github.com/ros-planning/navigation/issues/533>`_)
+* Contributors: Junya Hayashi, Martin Günther
+
+1.14.0 (2016-05-20)
 -------------------
 
-1.12.7 (2016-01-05)
--------------------
-
-1.12.6 (2016-01-02)
--------------------
-
-1.12.5 (2015-10-29)
+1.13.1 (2015-10-29)
 -------------------
 * Add missing angles dependecy
-* Contributors: Gary Servin
+* Fix for `#337 <https://github.com/ros-planning/navigation/issues/337>`_
+* Contributors: David V. Lu!!, Gary Servin
 
-1.12.4 (2015-06-03)
--------------------
-* Fix for `#337 <https://github.com/mikeferguson/navigation/issues/337>`_
-* Contributors: David V. Lu!!
-
-1.12.3 (2015-04-30)
--------------------
-
-1.12.2 (2015-03-31)
--------------------
-
-1.12.1 (2015-03-14)
+1.13.0 (2015-03-17)
 -------------------
 * Fixing various memory freeing operations
 * Add Orientation Filter to Global Planner
